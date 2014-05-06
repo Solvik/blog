@@ -21,11 +21,15 @@ hpacucli
 ----
 
     :::shell
-    hpacucli ctrl slot=1 ld 1 delete
-    hpacucli ctrl slot=1 create type=ld drives=1I:1:1 raid=0
-    hpacucli ctrl slot=1 create type=ld drives=1I:1:2 raid=0
-    hpacucli ctrl slot=1 create type=ld drives=1I:1:3 raid=0
-    hpacucli ctrl slot=1 create type=ld drives=1I:1:4 raid=0
+	# find your slot
+	slot=`hpacucli ctrl all show | grep -i slot | awk '{print $6}'
+    hpacucli ctrl slot=$slot ld 1 delete
+	# create one raid0 per physical disk
+	for phys in `hpacucli ctrl all show config | grep physicaldrive | awk '{print $2}'`;
+	do
+	  hpacucli controller slot=$slot create type=ld drives=$phys raid=0
+	done;
+
 
 Cleaning
 ----
@@ -35,7 +39,10 @@ If you use an old server, you must do some cleaning
 Let's start by zeroing the first 100MB of the partition in order to be sure to erase the partition table, the MBR
 
     :::shell
-	for i in {a..d}; do dd if=/dev/sda of=/dev/zero count=100 bs=1M; done
+	for i in {a..d} ;
+	do
+	  dd if=/dev/sda of=/dev/zero count=100 bs=1M
+	done
 
 Afterwars, let's notify the kernel about devices changes
 
@@ -47,9 +54,12 @@ MSDOS partitions
 ---
 
     :::shell
-    for i in {a..d} ; do echo parted /dev/sd$i --script -- mklabel msdos; done
-    for i in {a..d} ; do parted /dev/sd$i -a optimal --script -- unit MB mkpart primary 1 200; done
-    for i in {a..d} ; do parted /dev/sd$i -a optimal --script -- unit MB mkpart primary 200 -1; done
+    for i in {a..d} ;
+	do
+	  parted /dev/sd$i --script -- mklabel msdos
+      parted /dev/sd$i -a optimal --script -- unit MB mkpart primary 1 200
+      parted /dev/sd$i -a optimal --script -- unit MB mkpart primary 200 -1
+	done;
 
 
 GPT partitions
@@ -60,11 +70,14 @@ For GPT partitions you need to create [BIOS Boot partition][3] a small partition
 &nbsp;
 
     :::shell
-    for i in {a..d} ; do echo parted /dev/sd$i --script -- mklabel gpt; done
-    for i in {a..d} ; do parted /dev/sd$i -a optimal --script -- unit MB mkpart grub fat32 1mb 2mb; done
-    for i in {a..d} ; do parted /dev/sd$i -a optimal --script -- unit MB set 1 bios_grub on; done
-    for i in {a..d} ; do parted /dev/sd$i -a optimal --script -- unit MB mkpart primary 2mb 200; done
-    for i in {a..d} ; do parted /dev/sd$i -a optimal --script -- unit MB mkpart primary 200 -1; done
+    for i in {a..d} ;
+	do
+		parted /dev/sd$i --script -- mklabel gpt
+    	parted /dev/sd$i -a optimal --script -- unit MB mkpart grub fat32 1mb 2mb
+    	parted /dev/sd$i -a optimal --script -- unit MB set 1 bios_grub on
+    	parted /dev/sd$i -a optimal --script -- unit MB mkpart primary 2mb 200
+    	parted /dev/sd$i -a optimal --script -- unit MB mkpart primary 200 -1
+	done;
 
 
 
@@ -94,7 +107,9 @@ Let's format the RAID volumes
     mkfs.ext4 /dev/md0
     mkfs.ext4 /dev/md1
 
-Let's start the debootstrap session
+Let's start the debootstrap session. I use a basic /etc/apt/sources.list using this [convenient sources.list generator][2]
+
+
 
     :::shell
     mkdir /mnt/root
@@ -111,7 +126,6 @@ Let's start the debootstrap session
     /dev/md0        /boot   ext4    defaults                0       2
     " > /mnt/root/etc/fstab
 
-    # basic /etc/apt/sources.list using the [convenient generator][2]
     echo "#############################################################
     ################### OFFICIAL UBUNTU REPOS ###################
     #############################################################
@@ -161,9 +175,10 @@ Umount everything, sync for the last i/o and reboot
 
     :::shell
     umount /boot
-    umount /var
-    umount /home
     exit
+	umount /mnt/root/dev
+	umount /mnt/root/proc
+	umount /mnt/root/sys
     sync
     reboot
 
@@ -201,7 +216,13 @@ Your **/dev/md0** and **/dev/md1** should come online
 Here you go!
 
 
+Credits
+----
+
+Thanks to my friends [Pierre Tourbeaux][4] and [Michael Kozma][5] for all the advices and debugging over the year :)
 
 [1]: https://raid.wiki.kernel.org/index.php/RAID_superblock_formats
 [2]: http://repogen.simplylinux.ch/
 [3]: http://en.wikipedia.org/wiki/BIOS_Boot_partition
+[4]: http://www.si7v.fr
+[5]: http://www.ipsolution.fr
