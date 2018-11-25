@@ -10,14 +10,14 @@
 
   <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
 
-    <link rel="stylesheet/less" type="text/css" href="http://127.0.0.1:8000/theme/stylesheet/style.less">
+    <link rel="stylesheet/less" type="text/css" href="https://blog.solvik.fr/theme/stylesheet/style.less">
     <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/2.5.1/less.min.js" type="text/javascript"></script>
 
-  <link rel="stylesheet" type="text/css" href="http://127.0.0.1:8000/theme/pygments/monokai.min.css">
-  <link rel="stylesheet" type="text/css" href="http://127.0.0.1:8000/theme/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" type="text/css" href="https://blog.solvik.fr/theme/pygments/monokai.min.css">
+  <link rel="stylesheet" type="text/css" href="https://blog.solvik.fr/theme/font-awesome/css/font-awesome.min.css">
 
 
-    <link href="http://127.0.0.1:8000/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="A Pelican Blog Atom">
+    <link href="https://blog.solvik.fr/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="A Pelican Blog Atom">
 
 
 
@@ -40,11 +40,11 @@
 <meta property="og:title" content="Salt"/>
 <meta property="og:description" content="Since a few months, I&#39;ve been inclined to test and use Salt Stack. I manage a lot a heterogeneous plateforms, but each one are composed of similar machines who does the same stuff. For example, once three months, I&#39;m being asked to install a new packages, configure a new printer on desktop machines of our datacenter&#39;s collaborators. What a great use case :) Introduction Salt is like Puppet and Chef, which are also deployment and automation tools. I find it more lightweight and Installation It seems that Salt Stack is not yet in the official Ubuntu repositories Things to do on your master host: apt-get install python-software-properties add-apt-repository ppa:saltstack/salt apt-get update apt-get install salt-master Things to do on your client host: apt-get install python-software-properties add-apt-repository ppa:saltstack/salt apt-get update apt-get install salt-minion By default a Salt Minion will try to connect to the DNS name &#34;salt&#34;; if the Minion is able to resolve that name correctly, no configuration is needed. If the DNS name &#34;salt&#34; does not resolve, you need to edit /etc/salt/minion master: 192.168.0.2 Restart everything Master /etc/init.d/salt-master restart Minion /etc/init.d/salt-minion restart Communication Communications bettwen the Master and your Minions is done via AES encryption. But to communicate, your Minion&#39;s key must be accepted by the Master List all keys: $ salt-key -L Accepted Keys: Unaccepted Keys: NOC1-VTY2 NOC2-VTY2 NOC3-VTY2 NOC4-VTY2 Rejected Keys: Accept all keys $ salt-key -A Accept one key $ salt-key -a NOC1-VTY2 If you list your keys again you should get an output like this: $ salt-key -L Accepted Keys: NOC1-VTY2 NOC2-VTY2 NOC3-VTY2 NOC4-VTY2 Unaccepted Keys: Rejected Keys: You can now test the communication between your Master and one of all of your Minions $ salt &#39;NOC1-VTY2&#39; test.ping NOC1-VTY2: True $ salt &#39;*&#39; test.ping NOC3-VTY2: True NOC4-VTY2: True NOC1-VTY2: True NOC2-VTY2: True Deployment Now, I want to be able to add another computer to our NOC team without having to push manually all the configurations (NIS/NFS/packages etc) There is two major things, the directive file_roots and the file top.sls According to the documentation, SLS (or SaLt State file) is a representation of the state in which a system should be in. file_roots In your /etc/salt/master file, you need to uncomment the file_roots directive. It defines the location of the Salt file server and the SLS definitions. Mine look like this file_roots: base: - /srv/salt/ After this modification, restart your server top.sls Doing specific stuff to specific machines in the main purpose of Salt. This is defined within the top.sls file. This can be done by: Ways Example Globbing &#34;webserverprod&#34; Regular Expressions &#34;^(memcache|web).(qa|prod).loc$&#34; Lists &#34;dev1,dev2,dev3&#34; Grains &#34;os:CentOS&#34; Pillar Node Groups Compound Matching This is my top.sls file: base: &#39;*&#39;: - nagios.client &#39;os:Ubuntu&#39;: - repos.online &#39;^NOC(\d)+-VTY2$&#39;: - match: pcre - yp.install - yp.nsswitch - nfs.mount_noc base: base: &#39;*&#39;: - nagios.client This block declare the global environment the minion must apply. In this case, every machine will be assigned the nagios.client directive It&#39;s going to execute /srv/salt/nagios/client.sls os:Ubuntu This section matches machine using the Salt &#34;grain&#34; system, basically from system attributes. It will execute /srv/salt/repos/online.sls &#39;^NOC(\d)+-VTY2$&#39; This section matches using Perl regular expression feature If the hostname of the machine matches this regex, it will be assigned the few directives It will execute, /srv/salt/nagios/yp/install.sls, /srv/salt/nagios/yp/nsswitch.sls, /srv/salt/nagios/nfs/mount_noc.sls Links http://docs.saltstack.com/en/latest/ref/configuration/index.html http://intothesaltmine.org/blog/html/2013/04/18/configuration_management_with_salt_stack_part_1.html"/>
 <meta property="og:locale" content="en_US"/>
-<meta property="og:url" content="http://127.0.0.1:8000/salt-stack.html"/>
+<meta property="og:url" content="https://blog.solvik.fr/salt-stack.html"/>
 <meta property="og:type" content="article"/>
 <meta property="article:published_time" content="2014-04-24 12:20:00+02:00"/>
 <meta property="article:modified_time" content=""/>
-<meta property="article:author" content="http://127.0.0.1:8000/author/solvik.html">
+<meta property="article:author" content="https://blog.solvik.fr/author/solvik.html">
 <meta property="article:section" content="System"/>
 <meta property="article:tag" content="salt"/>
 <meta property="article:tag" content="python"/>
@@ -57,15 +57,15 @@
 <body>
   <aside>
     <div>
-      <a href="http://127.0.0.1:8000">
-        <img src="http://127.0.0.1:8000/theme/img/profile.png" alt="/home/solvik" title="/home/solvik">
+      <a href="https://blog.solvik.fr">
+        <img src="https://blog.solvik.fr/theme/img/profile.png" alt="/home/solvik" title="/home/solvik">
       </a>
-      <h1><a href="http://127.0.0.1:8000">/home/solvik</a></h1>
+      <h1><a href="https://blog.solvik.fr">/home/solvik</a></h1>
 
 <p>my place of sharing</p>
       <nav>
         <ul class="list">
-          <li><a href="http://127.0.0.1:8000/pages/about.html#about">About</a></li>
+          <li><a href="https://blog.solvik.fr/pages/about-me.html#about-me">About @me</a></li>
 
         </ul>
       </nav>
@@ -82,14 +82,14 @@
   <main>
 
     <nav>
-      <a href="http://127.0.0.1:8000">    Home
+      <a href="https://blog.solvik.fr">    Home
 </a>
 
       <a href="/archives.html">Archives</a>
       <a href="/categories.html">Categories</a>
       <a href="/tags.html">Tags</a>
 
-      <a href="http://127.0.0.1:8000/feeds/all.atom.xml">    Atom
+      <a href="https://blog.solvik.fr/feeds/all.atom.xml">    Atom
 </a>
 
     </nav>
@@ -99,7 +99,7 @@
       
     <h1 id="salt-stack">Salt</h1>
     <p>
-          Posted on avril 24, 2014 in <a href="http://127.0.0.1:8000/category/system.html">System</a>
+          Posted on avril 24, 2014 in <a href="https://blog.solvik.fr/category/system.html">System</a>
 
 
     </p>
@@ -302,9 +302,9 @@ It will execute, <em>/srv/salt/nagios/yp/install.sls</em>, <em>/srv/salt/nagios/
   </div>
   <div class="tag-cloud">
     <p>
-      <a href="http://127.0.0.1:8000/tag/salt.html">salt</a>
-      <a href="http://127.0.0.1:8000/tag/python.html">python</a>
-      <a href="http://127.0.0.1:8000/tag/deployment.html">deployment</a>
+      <a href="https://blog.solvik.fr/tag/salt.html">salt</a>
+      <a href="https://blog.solvik.fr/tag/python.html">python</a>
+      <a href="https://blog.solvik.fr/tag/deployment.html">deployment</a>
     </p>
   </div>
 
@@ -341,7 +341,7 @@ It will execute, <em>/srv/salt/nagios/yp/install.sls</em>, <em>/srv/salt/nagios/
   "@context" : "http://schema.org",
   "@type" : "Blog",
   "name": " A Pelican Blog ",
-  "url" : "http://127.0.0.1:8000",
+  "url" : "https://blog.solvik.fr",
   "image": "",
   "description": ""
 }
