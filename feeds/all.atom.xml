@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>A Pelican Blog</title><link href="https://blog.solvik.fr/" rel="alternate"></link><link href="https://blog.solvik.fr/feeds/all.atom.xml" rel="self"></link><id>https://blog.solvik.fr/</id><updated>2014-04-24T12:20:00+02:00</updated><subtitle>my place of sharing</subtitle><entry><title>Salt</title><link href="https://blog.solvik.fr/salt-stack.html" rel="alternate"></link><published>2014-04-24T12:20:00+02:00</published><updated>2014-04-24T12:20:00+02:00</updated><author><name>Solvik</name></author><id>tag:blog.solvik.fr,2014-04-24:/salt-stack.html</id><summary type="html">&lt;p&gt;Since a few months, I've been inclined to test and use &lt;a href="www.saltstack.com"&gt;Salt Stack&lt;/a&gt;.
+<feed xmlns="http://www.w3.org/2005/Atom"><title>A Pelican Blog</title><link href="https://blog.solvik.fr/" rel="alternate"></link><link href="https://blog.solvik.fr/feeds/all.atom.xml" rel="self"></link><id>https://blog.solvik.fr/</id><updated>2018-11-21T14:17:00+01:00</updated><subtitle>my place of sharing</subtitle><entry><title>Still here !</title><link href="https://blog.solvik.fr/glad-to-be-online-again.html" rel="alternate"></link><published>2018-11-21T14:17:00+01:00</published><updated>2018-11-21T14:17:00+01:00</updated><author><name>Solvik Blum</name></author><id>tag:blog.solvik.fr,2018-11-21:/glad-to-be-online-again.html</id><summary type="html">&lt;p&gt;After a few years off not having the time or motivation to write and share thoughts, discovery or useless snippets ; I take the time to put this blog on Github pages.&lt;/p&gt;
+&lt;p&gt;Reading the last articles I couldn't help but lol :-)&lt;/p&gt;
+&lt;p&gt;I'm going to try taking the time to write the following articles:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;How to I've helped a startup move from AWS S3 to an on-premise object storage platform powered by &lt;a href="https://github.com/open-io/oio-sds/"&gt;OpenIO&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Write an old article on how I've built a &lt;em&gt;80Gbit/s&lt;/em&gt; &lt;em&gt;live video streaming&lt;/em&gt; platform for Free Mobile announcement&lt;/li&gt;
+&lt;li&gt;How to use &lt;a href="https://dnsdist.org/"&gt;dnsdist&lt;/a&gt; as a reverse proxy for your public-facing DNS server and protect them&lt;/li&gt;
+&lt;li&gt;Complete the debootstrap how-to by adding the UEFI part&lt;/li&gt;
+&lt;/ul&gt;</summary><content type="html">&lt;p&gt;After a few years off not having the time or motivation to write and share thoughts, discovery or useless snippets ; I take the time to put this blog on Github pages.&lt;/p&gt;
+&lt;p&gt;Reading the last articles I couldn't help but lol :-)&lt;/p&gt;
+&lt;p&gt;I'm going to try taking the time to write the following articles:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;How to I've helped a startup move from AWS S3 to an on-premise object storage platform powered by &lt;a href="https://github.com/open-io/oio-sds/"&gt;OpenIO&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Write an old article on how I've built a &lt;em&gt;80Gbit/s&lt;/em&gt; &lt;em&gt;live video streaming&lt;/em&gt; platform for Free Mobile announcement&lt;/li&gt;
+&lt;li&gt;How to use &lt;a href="https://dnsdist.org/"&gt;dnsdist&lt;/a&gt; as a reverse proxy for your public-facing DNS server and protect them&lt;/li&gt;
+&lt;li&gt;Complete the debootstrap how-to by adding the UEFI part&lt;/li&gt;
+&lt;/ul&gt;</content><category term="pelican"></category><category term="publishing"></category></entry><entry><title>Salt</title><link href="https://blog.solvik.fr/salt-stack.html" rel="alternate"></link><published>2014-04-24T12:20:00+02:00</published><updated>2014-04-24T12:20:00+02:00</updated><author><name>Solvik</name></author><id>tag:blog.solvik.fr,2014-04-24:/salt-stack.html</id><summary type="html">&lt;p&gt;Since a few months, I've been inclined to test and use &lt;a href="www.saltstack.com"&gt;Salt Stack&lt;/a&gt;.
 I manage a lot a heterogeneous plateforms, but each one are composed of similar machines who does the same stuff.&lt;/p&gt;
 &lt;p&gt;For example, once three months, I'm being asked to install a new packages, configure a new printer on desktop machines of our datacenter's collaborators.
 What a great use case :)&lt;/p&gt;
