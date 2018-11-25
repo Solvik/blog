@@ -40,6 +40,7 @@
 <meta property="og:description" content=""/>
 <meta property="og:locale" content="en_US"/>
 <meta property="og:url" content="https://blog.solvik.fr"/>
+<meta property="og:image" content="https://en.gravatar.com/userimage/144533955/56e59d953cf9667fa0206fdd677aa7cc.jpg?size=200">
 
   <title>A Pelican Blog &ndash;     Tag python
 </title>
@@ -49,7 +50,7 @@
   <aside>
     <div>
       <a href="https://blog.solvik.fr">
-        <img src="https://blog.solvik.fr/theme/img/profile.png" alt="/home/solvik" title="/home/solvik">
+        <img src="https://en.gravatar.com/userimage/144533955/56e59d953cf9667fa0206fdd677aa7cc.jpg?size=200" alt="/home/solvik" title="/home/solvik">
       </a>
       <h1><a href="https://blog.solvik.fr">/home/solvik</a></h1>
 
@@ -87,6 +88,137 @@
 
 
 
+<article>
+  <header>
+    <h2><a href="https://blog.solvik.fr/csv-to-elasticsearch-in-order-to-replace-your-excel-with-kibana.html#csv-to-elasticsearch-in-order-to-replace-your-excel-with-kibana">CSV to Elasticsearch in order to replace your Excel with Kibana</a></h2>
+    <p>
+          Posted on novembre 25, 2018 in <a href="https://blog.solvik.fr/category/python.html">Python</a>
+
+
+
+    </p>
+  </header>
+  <div>
+      <p>Last night, I was asked if I could setup some frontend to make some stats out of a CSV.
+In a more interactive and collaborative way than Excel.</p>
+<p>I was first asked to do a small Django project since it used to be my goto technology at the time.</p>
+<p>But for this need, the use of <a href="https://www.elastic.co/fr/products/elasticsearch">Elasticsearch</a> was perfect and <a href="https://www.elastic.co/fr/products/kibana">Kibana</a> helped me to not develop any frontend and solve a lot of time.</p>
+<p>The CSV export looked like this but had at least 30 columns and 200k lines:</p>
+<div class="highlight"><pre><span></span>Column1;Colum2;Column3
+1;2;3
+a;b;c
+blih;blah;bluh
+</pre></div>
+
+
+<h2>Python way to push the CSV to Elasticsearch</h2>
+<p>Elasticsearch requires JSON documents, so the first step was to convert the CSV to <em>json</em>.</p>
+<p>Instead of writing a CSV to JSON parser, I used the <a href="https://pandas.pydata.org/">pandas</a> library which makes the whole process a lot easier and faster (the csv file had hundreds of thousands of lines).</p>
+<p>And by looking at the official elasticsearch python SDK, I just needed to transform the whole CSV into a dict.</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">from</span> <span class="nn">elasticsearch</span> <span class="kn">import</span> <span class="n">Elasticsearch</span><span class="p">,</span> <span class="n">helpers</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Process some integers.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;filename&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;filename to parse&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;index name to use&#39;</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">filename</span>
+    <span class="n">index_name</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">index</span>
+
+    <span class="c1"># initiate Elasticsearch connection</span>
+    <span class="n">es</span> <span class="o">=</span> <span class="n">Elasticsearch</span><span class="p">()</span>
+
+    <span class="c1"># parse the csv with pandas</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;;&#39;</span><span class="p">,</span> <span class="n">error_bad_lines</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="c1"># trim whitespace and stuff</span>
+    <span class="n">data_frame_trimmed</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span> <span class="k">else</span> <span class="n">x</span><span class="p">)</span>
+    <span class="c1"># replace `nan` values with empty string</span>
+    <span class="n">data_frame_trimmed</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="c1"># transform the whole data frame into a huge python dict</span>
+    <span class="n">records</span> <span class="o">=</span> <span class="n">data_frame_trimmed</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s1">&#39;records&#39;</span><span class="p">)</span>
+
+    <span class="c1"># use bulk actions to push the data</span>
+    <span class="n">actions</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">records</span><span class="p">):</span>
+    <span class="n">actions</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;_index&quot;</span><span class="p">:</span> <span class="n">index_name</span><span class="p">,</span>
+            <span class="s2">&quot;_type&quot;</span><span class="p">:</span> <span class="s2">&quot;vuln&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span>
+            <span class="s2">&quot;_source&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">})</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="n">helpers</span><span class="o">.</span><span class="n">bulk</span><span class="p">(</span><span class="n">es</span><span class="p">,</span> <span class="n">actions</span><span class="o">=</span><span class="n">actions</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+
+<p>And voila !</p>
+<div class="highlight"><pre><span></span>$ curl http://localhost:9200/vuln_2018-11-25/_search?pretty <span class="p">|</span> jq -r .
+<span class="o">{</span>
+  <span class="s2">&quot;took&quot;</span>: <span class="m">0</span>,
+  <span class="s2">&quot;timed_out&quot;</span>: false,
+  <span class="s2">&quot;_shards&quot;</span>: <span class="o">{</span>
+<span class="s2">&quot;total&quot;</span>: <span class="m">5</span>,
+<span class="s2">&quot;successful&quot;</span>: <span class="m">5</span>,
+<span class="s2">&quot;skipped&quot;</span>: <span class="m">0</span>,
+<span class="s2">&quot;failed&quot;</span>: <span class="m">0</span>
+  <span class="o">}</span>,
+  <span class="s2">&quot;hits&quot;</span>: <span class="o">{</span>
+<span class="s2">&quot;total&quot;</span>: <span class="m">3</span>,
+<span class="s2">&quot;max_score&quot;</span>: <span class="m">1</span>,
+<span class="s2">&quot;hits&quot;</span>: <span class="o">[</span>
+  <span class="o">{</span>
+    <span class="s2">&quot;_index&quot;</span>: <span class="s2">&quot;index_name_2018-11-25&quot;</span>,
+    <span class="s2">&quot;_type&quot;</span>: <span class="s2">&quot;vuln&quot;</span>,
+    <span class="s2">&quot;_id&quot;</span>: <span class="s2">&quot;0&quot;</span>,
+    <span class="s2">&quot;_score&quot;</span>: <span class="m">1</span>,
+    <span class="s2">&quot;_source&quot;</span>: <span class="o">{</span>
+      <span class="s2">&quot;Column1&quot;</span>: <span class="m">1</span>,
+      <span class="s2">&quot;Column2&quot;</span>: <span class="m">2</span>,
+      <span class="s2">&quot;Column3&quot;</span>: <span class="m">3</span>,
+    <span class="o">}</span>
+  <span class="o">}</span>,
+  <span class="o">{</span>
+    <span class="s2">&quot;_index&quot;</span>: <span class="s2">&quot;index_name_2018-11-25&quot;</span>,
+    <span class="s2">&quot;_type&quot;</span>: <span class="s2">&quot;vuln&quot;</span>,
+    <span class="s2">&quot;_id&quot;</span>: <span class="s2">&quot;1&quot;</span>,
+    <span class="s2">&quot;_score&quot;</span>: <span class="m">1</span>,
+    <span class="s2">&quot;_source&quot;</span>: <span class="o">{</span>
+      <span class="s2">&quot;Column1&quot;</span>: <span class="s2">&quot;a&quot;</span>,
+      <span class="s2">&quot;Column2&quot;</span>: <span class="s2">&quot;b&quot;</span>,
+      <span class="s2">&quot;Column3&quot;</span>: <span class="s2">&quot;c&quot;</span>,
+    <span class="o">}</span>
+  <span class="o">}</span>,
+  <span class="o">{</span>
+    <span class="s2">&quot;_index&quot;</span>: <span class="s2">&quot;index_name_2018-11-25&quot;</span>,
+    <span class="s2">&quot;_type&quot;</span>: <span class="s2">&quot;vuln&quot;</span>,
+    <span class="s2">&quot;_id&quot;</span>: <span class="s2">&quot;2&quot;</span>,
+    <span class="s2">&quot;_score&quot;</span>: <span class="m">1</span>,
+    <span class="s2">&quot;_source&quot;</span>: <span class="o">{</span>
+      <span class="s2">&quot;Column1&quot;</span>: <span class="s2">&quot;blih&quot;</span>,
+      <span class="s2">&quot;Column2&quot;</span>: <span class="s2">&quot;blah&quot;</span>,
+      <span class="s2">&quot;Column3&quot;</span>: <span class="s2">&quot;bluh&quot;</span>,
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">]</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+
+
+<p>After that you just need to install Kibana and enjoy your graphs, tables and so on in a more collaborative way, dynamic filters etc.</p>
+      <br>
+      <a class="btn" href="https://blog.solvik.fr/csv-to-elasticsearch-in-order-to-replace-your-excel-with-kibana.html#csv-to-elasticsearch-in-order-to-replace-your-excel-with-kibana">    Continue reading
+</a>
+  </div>
+  <hr />
+</article>
 <article>
   <header>
     <h2><a href="https://blog.solvik.fr/salt-stack.html#salt-stack">Salt</a></h2>
@@ -330,7 +462,7 @@ It will execute, <em>/srv/salt/nagios/yp/install.sls</em>, <em>/srv/salt/nagios/
   "@type" : "Blog",
   "name": " A Pelican Blog ",
   "url" : "https://blog.solvik.fr",
-  "image": "",
+  "image": "https://en.gravatar.com/userimage/144533955/56e59d953cf9667fa0206fdd677aa7cc.jpg?size=200",
   "description": ""
 }
 </script>

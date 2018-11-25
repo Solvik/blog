@@ -1,2 +1,228 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>A Pelican Blog - Python</title><link href="https://blog.solvik.fr/" rel="alternate"></link><link href="https://blog.solvik.fr/feeds/python.atom.xml" rel="self"></link><id>https://blog.solvik.fr/</id><updated>2014-04-10T00:17:00+02:00</updated><subtitle>my place of sharing</subtitle><entry><title>Welcome !</title><link href="https://blog.solvik.fr/welcome.html" rel="alternate"></link><published>2014-04-10T00:17:00+02:00</published><updated>2014-04-10T00:17:00+02:00</updated><author><name>Solvik</name></author><id>tag:blog.solvik.fr,2014-04-10:/welcome.html</id><summary type="html">&lt;p&gt;Welcome on this brand new blog using Pelican, a realy nice static-blog framework&lt;/p&gt;</summary><content type="html">&lt;p&gt;Welcome on this brand new blog using Pelican, a realy nice static-blog framework&lt;/p&gt;</content><category term="pelican"></category><category term="publishing"></category></entry></feed>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>A Pelican Blog - Python</title><link href="https://blog.solvik.fr/" rel="alternate"></link><link href="https://blog.solvik.fr/feeds/python.atom.xml" rel="self"></link><id>https://blog.solvik.fr/</id><updated>2018-11-25T15:00:00+01:00</updated><subtitle>my place of sharing</subtitle><entry><title>CSV to Elasticsearch in order to replace your Excel with Kibana</title><link href="https://blog.solvik.fr/csv-to-elasticsearch-in-order-to-replace-your-excel-with-kibana.html" rel="alternate"></link><published>2018-11-25T15:00:00+01:00</published><updated>2018-11-25T15:00:00+01:00</updated><author><name>Solvik Blum</name></author><id>tag:blog.solvik.fr,2018-11-25:/csv-to-elasticsearch-in-order-to-replace-your-excel-with-kibana.html</id><summary type="html">&lt;p&gt;Last night, I was asked if I could setup some frontend to make some stats out of a CSV.
+In a more interactive and collaborative way than Excel.&lt;/p&gt;
+&lt;p&gt;I was first asked to do a small Django project since it used to be my goto technology at the time.&lt;/p&gt;
+&lt;p&gt;But for this need, the use of &lt;a href="https://www.elastic.co/fr/products/elasticsearch"&gt;Elasticsearch&lt;/a&gt; was perfect and &lt;a href="https://www.elastic.co/fr/products/kibana"&gt;Kibana&lt;/a&gt; helped me to not develop any frontend and solve a lot of time.&lt;/p&gt;
+&lt;p&gt;The CSV export looked like this but had at least 30 columns and 200k lines:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;Column1;Colum2;Column3
+1;2;3
+a;b;c
+blih;blah;bluh
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Python way to push the CSV to Elasticsearch&lt;/h2&gt;
+&lt;p&gt;Elasticsearch requires JSON documents, so the first step was to convert the CSV to &lt;em&gt;json&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;Instead of writing a CSV to JSON parser, I used the &lt;a href="https://pandas.pydata.org/"&gt;pandas&lt;/a&gt; library which makes the whole process a lot easier and faster (the csv file had hundreds of thousands of lines).&lt;/p&gt;
+&lt;p&gt;And by looking at the official elasticsearch python SDK, I just needed to transform the whole CSV into a dict.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;sys&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;pandas&lt;/span&gt; &lt;span class="kn"&gt;as&lt;/span&gt; &lt;span class="nn"&gt;pd&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;argparse&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;elasticsearch&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;Elasticsearch&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;helpers&lt;/span&gt;
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;main&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+    &lt;span class="n"&gt;parser&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;argparse&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ArgumentParser&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;description&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;Process some integers.&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;parser&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;add_argument&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;filename&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;type&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;str&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="n"&gt;help&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;filename to parse&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;parser&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;add_argument&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;index&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;type&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;str&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="n"&gt;help&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;index name to use&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;args&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;parser&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;parse_args&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+    &lt;span class="n"&gt;filename&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;
+    &lt;span class="n"&gt;index_name&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;index&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# initiate Elasticsearch connection&lt;/span&gt;
+    &lt;span class="n"&gt;es&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Elasticsearch&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# parse the csv with pandas&lt;/span&gt;
+    &lt;span class="n"&gt;df&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pd&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;read_csv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;sep&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;error_bad_lines&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="bp"&gt;False&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="c1"&gt;# trim whitespace and stuff&lt;/span&gt;
+    &lt;span class="n"&gt;data_frame_trimmed&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;df&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;apply&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;lambda&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;str&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;strip&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dtype&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;object&amp;quot;&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="c1"&gt;# replace `nan` values with empty string&lt;/span&gt;
+    &lt;span class="n"&gt;data_frame_trimmed&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;df&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;fillna&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="c1"&gt;# transform the whole data frame into a huge python dict&lt;/span&gt;
+    &lt;span class="n"&gt;records&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;data_frame_trimmed&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;to_dict&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;orient&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;records&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# use bulk actions to push the data&lt;/span&gt;
+    &lt;span class="n"&gt;actions&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[]&lt;/span&gt;
+    &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;r&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;enumerate&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;records&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;actions&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;append&lt;/span&gt;&lt;span class="p"&gt;({&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;_index&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;index_name&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="s2"&gt;&amp;quot;_type&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;vuln&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="s2"&gt;&amp;quot;_id&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="s2"&gt;&amp;quot;_source&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;r&lt;/span&gt;&lt;span class="p"&gt;})&lt;/span&gt;
+    &lt;span class="n"&gt;ret&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;helpers&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bulk&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;es&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;actions&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;actions&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ret&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="vm"&gt;__name__&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;__main__&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;main&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;And voila !&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ curl http://localhost:9200/vuln_2018-11-25/_search?pretty &lt;span class="p"&gt;|&lt;/span&gt; jq -r .
+&lt;span class="o"&gt;{&lt;/span&gt;
+  &lt;span class="s2"&gt;&amp;quot;took&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;0&lt;/span&gt;,
+  &lt;span class="s2"&gt;&amp;quot;timed_out&amp;quot;&lt;/span&gt;: false,
+  &lt;span class="s2"&gt;&amp;quot;_shards&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;{&lt;/span&gt;
+&lt;span class="s2"&gt;&amp;quot;total&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;5&lt;/span&gt;,
+&lt;span class="s2"&gt;&amp;quot;successful&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;5&lt;/span&gt;,
+&lt;span class="s2"&gt;&amp;quot;skipped&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;0&lt;/span&gt;,
+&lt;span class="s2"&gt;&amp;quot;failed&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;0&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;,
+  &lt;span class="s2"&gt;&amp;quot;hits&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;{&lt;/span&gt;
+&lt;span class="s2"&gt;&amp;quot;total&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;3&lt;/span&gt;,
+&lt;span class="s2"&gt;&amp;quot;max_score&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;1&lt;/span&gt;,
+&lt;span class="s2"&gt;&amp;quot;hits&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;[&lt;/span&gt;
+  &lt;span class="o"&gt;{&lt;/span&gt;
+    &lt;span class="s2"&gt;&amp;quot;_index&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;index_name_2018-11-25&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_type&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;vuln&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_id&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;0&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_score&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;1&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_source&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;{&lt;/span&gt;
+      &lt;span class="s2"&gt;&amp;quot;Column1&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;1&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column2&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;2&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column3&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;3&lt;/span&gt;,
+    &lt;span class="o"&gt;}&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;,
+  &lt;span class="o"&gt;{&lt;/span&gt;
+    &lt;span class="s2"&gt;&amp;quot;_index&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;index_name_2018-11-25&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_type&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;vuln&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_id&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;1&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_score&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;1&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_source&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;{&lt;/span&gt;
+      &lt;span class="s2"&gt;&amp;quot;Column1&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;a&amp;quot;&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column2&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;b&amp;quot;&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column3&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;c&amp;quot;&lt;/span&gt;,
+    &lt;span class="o"&gt;}&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;,
+  &lt;span class="o"&gt;{&lt;/span&gt;
+    &lt;span class="s2"&gt;&amp;quot;_index&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;index_name_2018-11-25&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_type&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;vuln&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_id&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;2&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_score&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;1&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_source&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;{&lt;/span&gt;
+      &lt;span class="s2"&gt;&amp;quot;Column1&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;blih&amp;quot;&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column2&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;blah&amp;quot;&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column3&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;bluh&amp;quot;&lt;/span&gt;,
+    &lt;span class="o"&gt;}&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="o"&gt;]&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;After that you just need to install Kibana and enjoy your graphs, tables and so on in a more collaborative way, dynamic filters etc.&lt;/p&gt;</summary><content type="html">&lt;p&gt;Last night, I was asked if I could setup some frontend to make some stats out of a CSV.
+In a more interactive and collaborative way than Excel.&lt;/p&gt;
+&lt;p&gt;I was first asked to do a small Django project since it used to be my goto technology at the time.&lt;/p&gt;
+&lt;p&gt;But for this need, the use of &lt;a href="https://www.elastic.co/fr/products/elasticsearch"&gt;Elasticsearch&lt;/a&gt; was perfect and &lt;a href="https://www.elastic.co/fr/products/kibana"&gt;Kibana&lt;/a&gt; helped me to not develop any frontend and solve a lot of time.&lt;/p&gt;
+&lt;p&gt;The CSV export looked like this but had at least 30 columns and 200k lines:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;Column1;Colum2;Column3
+1;2;3
+a;b;c
+blih;blah;bluh
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Python way to push the CSV to Elasticsearch&lt;/h2&gt;
+&lt;p&gt;Elasticsearch requires JSON documents, so the first step was to convert the CSV to &lt;em&gt;json&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;Instead of writing a CSV to JSON parser, I used the &lt;a href="https://pandas.pydata.org/"&gt;pandas&lt;/a&gt; library which makes the whole process a lot easier and faster (the csv file had hundreds of thousands of lines).&lt;/p&gt;
+&lt;p&gt;And by looking at the official elasticsearch python SDK, I just needed to transform the whole CSV into a dict.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;sys&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;pandas&lt;/span&gt; &lt;span class="kn"&gt;as&lt;/span&gt; &lt;span class="nn"&gt;pd&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;argparse&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;elasticsearch&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;Elasticsearch&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;helpers&lt;/span&gt;
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;main&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+    &lt;span class="n"&gt;parser&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;argparse&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ArgumentParser&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;description&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;Process some integers.&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;parser&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;add_argument&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;filename&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;type&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;str&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="n"&gt;help&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;filename to parse&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;parser&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;add_argument&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;index&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;type&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nb"&gt;str&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="n"&gt;help&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;index name to use&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;args&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;parser&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;parse_args&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+    &lt;span class="n"&gt;filename&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;
+    &lt;span class="n"&gt;index_name&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;index&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# initiate Elasticsearch connection&lt;/span&gt;
+    &lt;span class="n"&gt;es&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;Elasticsearch&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# parse the csv with pandas&lt;/span&gt;
+    &lt;span class="n"&gt;df&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;pd&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;read_csv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;filename&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;sep&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;error_bad_lines&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="bp"&gt;False&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="c1"&gt;# trim whitespace and stuff&lt;/span&gt;
+    &lt;span class="n"&gt;data_frame_trimmed&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;df&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;apply&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;lambda&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;str&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;strip&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dtype&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;object&amp;quot;&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="n"&gt;x&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="c1"&gt;# replace `nan` values with empty string&lt;/span&gt;
+    &lt;span class="n"&gt;data_frame_trimmed&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;df&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;fillna&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="c1"&gt;# transform the whole data frame into a huge python dict&lt;/span&gt;
+    &lt;span class="n"&gt;records&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;data_frame_trimmed&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;to_dict&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;orient&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;records&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# use bulk actions to push the data&lt;/span&gt;
+    &lt;span class="n"&gt;actions&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[]&lt;/span&gt;
+    &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;r&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;enumerate&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;records&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;actions&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;append&lt;/span&gt;&lt;span class="p"&gt;({&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;_index&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;index_name&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="s2"&gt;&amp;quot;_type&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;vuln&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="s2"&gt;&amp;quot;_id&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+            &lt;span class="s2"&gt;&amp;quot;_source&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;r&lt;/span&gt;&lt;span class="p"&gt;})&lt;/span&gt;
+    &lt;span class="n"&gt;ret&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;helpers&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bulk&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;es&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;actions&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;actions&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ret&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="vm"&gt;__name__&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;__main__&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;main&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;And voila !&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ curl http://localhost:9200/vuln_2018-11-25/_search?pretty &lt;span class="p"&gt;|&lt;/span&gt; jq -r .
+&lt;span class="o"&gt;{&lt;/span&gt;
+  &lt;span class="s2"&gt;&amp;quot;took&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;0&lt;/span&gt;,
+  &lt;span class="s2"&gt;&amp;quot;timed_out&amp;quot;&lt;/span&gt;: false,
+  &lt;span class="s2"&gt;&amp;quot;_shards&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;{&lt;/span&gt;
+&lt;span class="s2"&gt;&amp;quot;total&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;5&lt;/span&gt;,
+&lt;span class="s2"&gt;&amp;quot;successful&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;5&lt;/span&gt;,
+&lt;span class="s2"&gt;&amp;quot;skipped&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;0&lt;/span&gt;,
+&lt;span class="s2"&gt;&amp;quot;failed&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;0&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;,
+  &lt;span class="s2"&gt;&amp;quot;hits&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;{&lt;/span&gt;
+&lt;span class="s2"&gt;&amp;quot;total&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;3&lt;/span&gt;,
+&lt;span class="s2"&gt;&amp;quot;max_score&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;1&lt;/span&gt;,
+&lt;span class="s2"&gt;&amp;quot;hits&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;[&lt;/span&gt;
+  &lt;span class="o"&gt;{&lt;/span&gt;
+    &lt;span class="s2"&gt;&amp;quot;_index&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;index_name_2018-11-25&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_type&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;vuln&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_id&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;0&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_score&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;1&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_source&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;{&lt;/span&gt;
+      &lt;span class="s2"&gt;&amp;quot;Column1&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;1&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column2&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;2&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column3&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;3&lt;/span&gt;,
+    &lt;span class="o"&gt;}&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;,
+  &lt;span class="o"&gt;{&lt;/span&gt;
+    &lt;span class="s2"&gt;&amp;quot;_index&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;index_name_2018-11-25&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_type&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;vuln&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_id&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;1&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_score&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;1&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_source&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;{&lt;/span&gt;
+      &lt;span class="s2"&gt;&amp;quot;Column1&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;a&amp;quot;&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column2&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;b&amp;quot;&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column3&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;c&amp;quot;&lt;/span&gt;,
+    &lt;span class="o"&gt;}&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;,
+  &lt;span class="o"&gt;{&lt;/span&gt;
+    &lt;span class="s2"&gt;&amp;quot;_index&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;index_name_2018-11-25&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_type&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;vuln&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_id&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;2&amp;quot;&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_score&amp;quot;&lt;/span&gt;: &lt;span class="m"&gt;1&lt;/span&gt;,
+    &lt;span class="s2"&gt;&amp;quot;_source&amp;quot;&lt;/span&gt;: &lt;span class="o"&gt;{&lt;/span&gt;
+      &lt;span class="s2"&gt;&amp;quot;Column1&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;blih&amp;quot;&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column2&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;blah&amp;quot;&lt;/span&gt;,
+      &lt;span class="s2"&gt;&amp;quot;Column3&amp;quot;&lt;/span&gt;: &lt;span class="s2"&gt;&amp;quot;bluh&amp;quot;&lt;/span&gt;,
+    &lt;span class="o"&gt;}&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="o"&gt;]&lt;/span&gt;
+  &lt;span class="o"&gt;}&lt;/span&gt;
+&lt;span class="o"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;After that you just need to install Kibana and enjoy your graphs, tables and so on in a more collaborative way, dynamic filters etc.&lt;/p&gt;</content><category term="elasticsearch"></category><category term="kibana"></category><category term="python"></category><category term="pandas"></category><category term="data"></category></entry><entry><title>Welcome !</title><link href="https://blog.solvik.fr/welcome.html" rel="alternate"></link><published>2014-04-10T00:17:00+02:00</published><updated>2014-04-10T00:17:00+02:00</updated><author><name>Solvik</name></author><id>tag:blog.solvik.fr,2014-04-10:/welcome.html</id><summary type="html">&lt;p&gt;Welcome on this brand new blog using Pelican, a realy nice static-blog framework&lt;/p&gt;</summary><content type="html">&lt;p&gt;Welcome on this brand new blog using Pelican, a realy nice static-blog framework&lt;/p&gt;</content><category term="pelican"></category><category term="publishing"></category></entry></feed>
