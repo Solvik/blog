@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 
 AUTHOR = u'Solvik Blum'
-SITEURL = 'http://127.0.0.1:8000/'
+SITEURL = 'https://blog.solvik.fr/'
 SITETITLE = '/home/solvik'
 SITESUBTITLE = 'my place of sharing'
 SUMMARY_MAX_LENGTH = 5000
@@ -56,8 +56,9 @@ LINKS =  (())
 
 # Social widget
 SOCIAL = (
-    ('Linkedin', 'fr.linkedin.com/in/solvikblum'),
-    ('Twitter', 'https://twitter.com/solvik'),
+    ('linkedin', 'https://www.linkedin.com/in/solvikblum'),
+    ('twitter', 'https://twitter.com/solvik'),
+    ('github', 'https://github.com/Solvik'),
     )
 
 DEFAULT_PAGINATION = 10
