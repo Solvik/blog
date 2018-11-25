@@ -71,3 +71,6 @@ THEME_PATH = os.path.join(
     'pelican-themes')
 THEME_CHOICE = 'Flex'
 THEME = os.path.join(THEME_PATH, THEME_CHOICE)
+
+STATIC_PATHS = ['images', 'extra/CNAME']
+EXTRA_PATH_METADATA = {'extra/CNAME': {'path': 'CNAME'},}
