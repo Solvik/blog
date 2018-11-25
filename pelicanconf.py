@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 
 AUTHOR = u'Solvik Blum'
+SITELOGO = 'https://en.gravatar.com/userimage/144533955/56e59d953cf9667fa0206fdd677aa7cc.jpg?size=200'
 SITEURL = 'https://blog.solvik.fr/'
 SITETITLE = '/home/solvik'
 SITESUBTITLE = 'my place of sharing'
