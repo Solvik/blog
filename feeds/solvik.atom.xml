@@ -1,0 +1,1076 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>A Pelican Blog - Solvik</title><link href="http://127.0.0.1:8000/" rel="alternate"></link><link href="http://127.0.0.1:8000/feeds/solvik.atom.xml" rel="self"></link><id>http://127.0.0.1:8000/</id><updated>2014-04-24T12:20:00+02:00</updated><subtitle>my place of sharing</subtitle><entry><title>Salt</title><link href="http://127.0.0.1:8000/salt-stack.html" rel="alternate"></link><published>2014-04-24T12:20:00+02:00</published><updated>2014-04-24T12:20:00+02:00</updated><author><name>Solvik</name></author><id>tag:127.0.0.1,2014-04-24:/salt-stack.html</id><summary type="html">&lt;p&gt;Since a few months, I've been inclined to test and use &lt;a href="www.saltstack.com"&gt;Salt Stack&lt;/a&gt;.
+I manage a lot a heterogeneous plateforms, but each one are composed of similar machines who does the same stuff.&lt;/p&gt;
+&lt;p&gt;For example, once three months, I'm being asked to install a new packages, configure a new printer on desktop machines of our datacenter's collaborators.
+What a great use case :)&lt;/p&gt;
+&lt;h2&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;Salt is like Puppet and Chef, which are also deployment and automation tools. I find it more lightweight and&lt;/p&gt;
+&lt;h2&gt;Installation&lt;/h2&gt;
+&lt;p&gt;It seems that Salt Stack is not yet in the official Ubuntu repositories&lt;/p&gt;
+&lt;p&gt;Things to do on your master host:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;apt-get install python-software-properties
+add-apt-repository ppa:saltstack/salt
+
+apt-get update
+apt-get install salt-master
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Things to do on your client host:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;apt-get install python-software-properties
+add-apt-repository ppa:saltstack/salt
+
+apt-get update
+apt-get install salt-minion
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;By default a Salt Minion will try to connect to the DNS name "salt"; if the Minion is able to resolve that name correctly, no configuration is needed.
+If the DNS name "salt" does not resolve, you need to edit &lt;strong&gt;/etc/salt/minion&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;master: &lt;span class="m"&gt;192&lt;/span&gt;.168.0.2
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Restart everything&lt;/p&gt;
+&lt;p&gt;Master&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;/etc/init.d/salt-master restart
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Minion&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;/etc/init.d/salt-minion restart
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Communication&lt;/h2&gt;
+&lt;p&gt;Communications bettwen the Master and your Minions is done via &lt;a href="http://fr.wikipedia.org/wiki/Advanced_Encryption_Standard"&gt;AES encryption&lt;/a&gt;. But to communicate, your Minion's key must be accepted by the Master&lt;/p&gt;
+&lt;p&gt;List all keys:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ salt-key -L
+Accepted Keys:
+Unaccepted Keys:
+NOC1-VTY2
+NOC2-VTY2
+NOC3-VTY2
+NOC4-VTY2
+Rejected Keys:
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Accept all keys&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ salt-key -A
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Accept one key&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ salt-key -a NOC1-VTY2
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;If you list your keys again you should get an output like this:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ salt-key -L
+Accepted Keys:
+NOC1-VTY2
+NOC2-VTY2
+NOC3-VTY2
+NOC4-VTY2
+Unaccepted Keys:
+Rejected Keys:
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;You can now test the communication between your Master and one of all of your Minions&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ salt &lt;span class="s1"&gt;&amp;#39;NOC1-VTY2&amp;#39;&lt;/span&gt; test.ping
+NOC1-VTY2:
+    True
+$ salt &lt;span class="s1"&gt;&amp;#39;*&amp;#39;&lt;/span&gt; test.ping
+NOC3-VTY2:
+    True
+NOC4-VTY2:
+    True
+NOC1-VTY2:
+    True
+NOC2-VTY2:
+    True
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Deployment&lt;/h2&gt;
+&lt;p&gt;Now, I want to be able to add another computer to our NOC team without having to push manually all the configurations (NIS/NFS/packages etc)&lt;/p&gt;
+&lt;p&gt;There is two major things, the directive &lt;strong&gt;file_roots&lt;/strong&gt; and the file &lt;strong&gt;top.sls&lt;/strong&gt;
+According to the &lt;a href="http://docs.saltstack.com/en/latest/topics/tutorials/starting_states.html"&gt;documentation&lt;/a&gt;, SLS (or SaLt State file) is a representation of the state in which a system should be in.&lt;/p&gt;
+&lt;p&gt;file_roots&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;p&gt;In your &lt;strong&gt;/etc/salt/master&lt;/strong&gt; file, you need to uncomment the file_roots directive. It defines the location of the Salt file server and the SLS definitions.
+Mine look like this&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;file_roots&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+  &lt;span class="n"&gt;base&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+    &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="sr"&gt;/srv/salt/&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;After this modification, restart your server&lt;/p&gt;
+&lt;p&gt;top.sls&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;p&gt;Doing specific stuff to specific machines in the main purpose of Salt.
+This is defined within the &lt;strong&gt;top.sls&lt;/strong&gt; file.&lt;/p&gt;
+&lt;p&gt;This can be done by:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Ways&lt;/th&gt;
+&lt;th&gt;Example&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Globbing&lt;/td&gt;
+&lt;td&gt;"webserver&lt;em&gt;prod&lt;/em&gt;"&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Regular Expressions&lt;/td&gt;
+&lt;td&gt;"^(memcache&amp;#124;web).(qa&amp;#124;prod).loc$"&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Lists&lt;/td&gt;
+&lt;td&gt;"dev1,dev2,dev3"&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Grains&lt;/td&gt;
+&lt;td&gt;"os:CentOS"&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Pillar&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Node Groups&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Compound Matching&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;This is my top.sls file:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;base:
+   &amp;#39;*&amp;#39;:
+     - nagios.client
+   &amp;#39;os:Ubuntu&amp;#39;:
+     - repos.online
+   &amp;#39;^NOC(\d)+-VTY2$&amp;#39;:
+     - match: pcre
+     - yp.install
+     - yp.nsswitch
+     - nfs.mount_noc
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;base:&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;base:
+   &amp;#39;*&amp;#39;:
+     - nagios.client
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;This block declare the global environment the minion must apply.
+In this case, every machine will be assigned the nagios.client directive
+It's going to execute &lt;em&gt;/srv/salt/nagios/client.sls&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;os:Ubuntu&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;p&gt;This section matches machine using the Salt "grain" system, basically from system attributes.
+It will execute &lt;em&gt;/srv/salt/repos/online.sls&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;'^NOC(\d)+-VTY2$'&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;p&gt;This section matches using Perl regular expression feature
+If the hostname of the machine matches this regex, it will be assigned the few directives
+It will execute, &lt;em&gt;/srv/salt/nagios/yp/install.sls&lt;/em&gt;, &lt;em&gt;/srv/salt/nagios/yp/nsswitch.sls&lt;/em&gt;, &lt;em&gt;/srv/salt/nagios/nfs/mount_noc.sls&lt;/em&gt;&lt;/p&gt;
+&lt;h2&gt;Links&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="http://docs.saltstack.com/en/latest/ref/configuration/index.html"&gt;http://docs.saltstack.com/en/latest/ref/configuration/index.html&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://intothesaltmine.org/blog/html/2013/04/18/configuration_management_with_salt_stack_part_1.html"&gt;http://intothesaltmine.org/blog/html/2013/04/18/configuration_management_with_salt_stack_part_1.html&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</summary><content type="html">&lt;p&gt;Since a few months, I've been inclined to test and use &lt;a href="www.saltstack.com"&gt;Salt Stack&lt;/a&gt;.
+I manage a lot a heterogeneous plateforms, but each one are composed of similar machines who does the same stuff.&lt;/p&gt;
+&lt;p&gt;For example, once three months, I'm being asked to install a new packages, configure a new printer on desktop machines of our datacenter's collaborators.
+What a great use case :)&lt;/p&gt;
+&lt;h2&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;Salt is like Puppet and Chef, which are also deployment and automation tools. I find it more lightweight and&lt;/p&gt;
+&lt;h2&gt;Installation&lt;/h2&gt;
+&lt;p&gt;It seems that Salt Stack is not yet in the official Ubuntu repositories&lt;/p&gt;
+&lt;p&gt;Things to do on your master host:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;apt-get install python-software-properties
+add-apt-repository ppa:saltstack/salt
+
+apt-get update
+apt-get install salt-master
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Things to do on your client host:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;apt-get install python-software-properties
+add-apt-repository ppa:saltstack/salt
+
+apt-get update
+apt-get install salt-minion
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;By default a Salt Minion will try to connect to the DNS name "salt"; if the Minion is able to resolve that name correctly, no configuration is needed.
+If the DNS name "salt" does not resolve, you need to edit &lt;strong&gt;/etc/salt/minion&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;master: &lt;span class="m"&gt;192&lt;/span&gt;.168.0.2
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Restart everything&lt;/p&gt;
+&lt;p&gt;Master&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;/etc/init.d/salt-master restart
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Minion&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;/etc/init.d/salt-minion restart
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Communication&lt;/h2&gt;
+&lt;p&gt;Communications bettwen the Master and your Minions is done via &lt;a href="http://fr.wikipedia.org/wiki/Advanced_Encryption_Standard"&gt;AES encryption&lt;/a&gt;. But to communicate, your Minion's key must be accepted by the Master&lt;/p&gt;
+&lt;p&gt;List all keys:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ salt-key -L
+Accepted Keys:
+Unaccepted Keys:
+NOC1-VTY2
+NOC2-VTY2
+NOC3-VTY2
+NOC4-VTY2
+Rejected Keys:
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Accept all keys&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ salt-key -A
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Accept one key&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ salt-key -a NOC1-VTY2
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;If you list your keys again you should get an output like this:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ salt-key -L
+Accepted Keys:
+NOC1-VTY2
+NOC2-VTY2
+NOC3-VTY2
+NOC4-VTY2
+Unaccepted Keys:
+Rejected Keys:
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;You can now test the communication between your Master and one of all of your Minions&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ salt &lt;span class="s1"&gt;&amp;#39;NOC1-VTY2&amp;#39;&lt;/span&gt; test.ping
+NOC1-VTY2:
+    True
+$ salt &lt;span class="s1"&gt;&amp;#39;*&amp;#39;&lt;/span&gt; test.ping
+NOC3-VTY2:
+    True
+NOC4-VTY2:
+    True
+NOC1-VTY2:
+    True
+NOC2-VTY2:
+    True
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Deployment&lt;/h2&gt;
+&lt;p&gt;Now, I want to be able to add another computer to our NOC team without having to push manually all the configurations (NIS/NFS/packages etc)&lt;/p&gt;
+&lt;p&gt;There is two major things, the directive &lt;strong&gt;file_roots&lt;/strong&gt; and the file &lt;strong&gt;top.sls&lt;/strong&gt;
+According to the &lt;a href="http://docs.saltstack.com/en/latest/topics/tutorials/starting_states.html"&gt;documentation&lt;/a&gt;, SLS (or SaLt State file) is a representation of the state in which a system should be in.&lt;/p&gt;
+&lt;p&gt;file_roots&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;p&gt;In your &lt;strong&gt;/etc/salt/master&lt;/strong&gt; file, you need to uncomment the file_roots directive. It defines the location of the Salt file server and the SLS definitions.
+Mine look like this&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;file_roots&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+  &lt;span class="n"&gt;base&lt;/span&gt;&lt;span class="o"&gt;:&lt;/span&gt;
+    &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="sr"&gt;/srv/salt/&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;After this modification, restart your server&lt;/p&gt;
+&lt;p&gt;top.sls&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;p&gt;Doing specific stuff to specific machines in the main purpose of Salt.
+This is defined within the &lt;strong&gt;top.sls&lt;/strong&gt; file.&lt;/p&gt;
+&lt;p&gt;This can be done by:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Ways&lt;/th&gt;
+&lt;th&gt;Example&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Globbing&lt;/td&gt;
+&lt;td&gt;"webserver&lt;em&gt;prod&lt;/em&gt;"&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Regular Expressions&lt;/td&gt;
+&lt;td&gt;"^(memcache&amp;#124;web).(qa&amp;#124;prod).loc$"&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Lists&lt;/td&gt;
+&lt;td&gt;"dev1,dev2,dev3"&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Grains&lt;/td&gt;
+&lt;td&gt;"os:CentOS"&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Pillar&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Node Groups&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Compound Matching&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;This is my top.sls file:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;base:
+   &amp;#39;*&amp;#39;:
+     - nagios.client
+   &amp;#39;os:Ubuntu&amp;#39;:
+     - repos.online
+   &amp;#39;^NOC(\d)+-VTY2$&amp;#39;:
+     - match: pcre
+     - yp.install
+     - yp.nsswitch
+     - nfs.mount_noc
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;base:&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;base:
+   &amp;#39;*&amp;#39;:
+     - nagios.client
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;This block declare the global environment the minion must apply.
+In this case, every machine will be assigned the nagios.client directive
+It's going to execute &lt;em&gt;/srv/salt/nagios/client.sls&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;os:Ubuntu&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;p&gt;This section matches machine using the Salt "grain" system, basically from system attributes.
+It will execute &lt;em&gt;/srv/salt/repos/online.sls&lt;/em&gt;&lt;/p&gt;
+&lt;p&gt;'^NOC(\d)+-VTY2$'&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;p&gt;This section matches using Perl regular expression feature
+If the hostname of the machine matches this regex, it will be assigned the few directives
+It will execute, &lt;em&gt;/srv/salt/nagios/yp/install.sls&lt;/em&gt;, &lt;em&gt;/srv/salt/nagios/yp/nsswitch.sls&lt;/em&gt;, &lt;em&gt;/srv/salt/nagios/nfs/mount_noc.sls&lt;/em&gt;&lt;/p&gt;
+&lt;h2&gt;Links&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="http://docs.saltstack.com/en/latest/ref/configuration/index.html"&gt;http://docs.saltstack.com/en/latest/ref/configuration/index.html&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://intothesaltmine.org/blog/html/2013/04/18/configuration_management_with_salt_stack_part_1.html"&gt;http://intothesaltmine.org/blog/html/2013/04/18/configuration_management_with_salt_stack_part_1.html&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content><category term="salt"></category><category term="python"></category><category term="deployment"></category></entry><entry><title>How-To Debootstrap</title><link href="http://127.0.0.1:8000/howto-debootstrap.html" rel="alternate"></link><published>2014-04-23T17:00:00+02:00</published><updated>2014-04-23T17:00:00+02:00</updated><author><name>Solvik</name></author><id>tag:127.0.0.1,2014-04-23:/howto-debootstrap.html</id><summary type="html">&lt;p&gt;For my infrastructure purposes I often need to install as fast as possible.
+Most of my servers comes with 4 disks and one or more RAID card.&lt;/p&gt;
+&lt;p&gt;I usually don't trust the RAID cards, so I always create a raid0 / disk in order to use every logical volume like it was a real disk.&lt;/p&gt;
+&lt;p&gt;And I always use the above partition schema&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;mount&lt;/th&gt;
+&lt;th&gt;size&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;/boot&lt;/td&gt;
+&lt;td&gt;200M&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/&lt;/td&gt;
+&lt;td&gt;*&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2&gt;hpacucli&lt;/h2&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;# find your slot&lt;/span&gt;
+&lt;span class="nv"&gt;slot&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="sb"&gt;`&lt;/span&gt;hpacucli ctrl all show &lt;span class="p"&gt;|&lt;/span&gt; grep -i slot &lt;span class="p"&gt;|&lt;/span&gt; awk &lt;span class="s1"&gt;&amp;#39;{print $6}&amp;#39;&lt;/span&gt;
+hpacucli ctrl &lt;span class="nv"&gt;slot&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nv"&gt;$slot&lt;/span&gt; ld &lt;span class="m"&gt;1&lt;/span&gt; delete
+&lt;span class="c1"&gt;# create one raid0 per physical disk&lt;/span&gt;
+&lt;span class="k"&gt;for&lt;/span&gt; phys in &lt;span class="sb"&gt;`&lt;/span&gt;hpacucli ctrl all show config &lt;span class="p"&gt;|&lt;/span&gt; grep physicaldrive &lt;span class="p"&gt;|&lt;/span&gt; awk &lt;span class="s1"&gt;&amp;#39;{print $2}&amp;#39;&lt;/span&gt;&lt;span class="sb"&gt;`&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;do&lt;/span&gt;
+  hpacucli controller &lt;span class="nv"&gt;slot&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nv"&gt;$slot&lt;/span&gt; create &lt;span class="nv"&gt;type&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;ld &lt;span class="nv"&gt;drives&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nv"&gt;$phys&lt;/span&gt; &lt;span class="nv"&gt;raid&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;
+&lt;span class="k"&gt;done&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Cleaning&lt;/h2&gt;
+&lt;p&gt;If you use an old server, you must do some cleaning&lt;/p&gt;
+&lt;p&gt;Let's start by zeroing the first 100MB of the partition in order to be sure to erase the partition table, the MBR&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt; i in &lt;span class="o"&gt;{&lt;/span&gt;a..d&lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;do&lt;/span&gt;
+  dd &lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/dev/sda &lt;span class="nv"&gt;of&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/dev/zero &lt;span class="nv"&gt;count&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;100&lt;/span&gt; &lt;span class="nv"&gt;bs&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;1M
+&lt;span class="k"&gt;done&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Afterwars, let's notify the kernel about devices changes&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;partprobe
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;MSDOS partitions&lt;/h2&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt; i in &lt;span class="o"&gt;{&lt;/span&gt;a..d&lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;do&lt;/span&gt;
+  parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; --script -- mklabel msdos
+  parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB mkpart primary &lt;span class="m"&gt;1&lt;/span&gt; &lt;span class="m"&gt;200&lt;/span&gt;
+  parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB mkpart primary &lt;span class="m"&gt;200&lt;/span&gt; -1
+&lt;span class="k"&gt;done&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;GPT partitions&lt;/h2&gt;
+&lt;p&gt;For GPT partitions you need to create &lt;a href="http://en.wikipedia.org/wiki/BIOS_Boot_partition"&gt;BIOS Boot partition&lt;/a&gt; a small partition, at least 1mb.&lt;/p&gt;
+&lt;p&gt;&amp;nbsp;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt; i in &lt;span class="o"&gt;{&lt;/span&gt;a..d&lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;do&lt;/span&gt;
+    parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; --script -- mklabel gpt
+    parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB mkpart grub fat32 1mb 2mb
+    parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB &lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="m"&gt;1&lt;/span&gt; bios_grub on
+    parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB mkpart primary 2mb &lt;span class="m"&gt;200&lt;/span&gt;
+    parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB mkpart primary &lt;span class="m"&gt;200&lt;/span&gt; -1
+&lt;span class="k"&gt;done&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Installation&lt;/h2&gt;
+&lt;p&gt;I prefer to use software raid with mdadm.
+If you want to boot on a mdadm's volume you need it to use the &lt;a href="https://raid.wiki.kernel.org/index.php/RAID_superblock_formats"&gt;0.90 metadatas&lt;/a&gt;
+For you &lt;strong&gt;/&lt;/strong&gt;, use the raid-level you want and don't give any metadata paramaters so it can takes the &lt;strong&gt;1.2&lt;/strong&gt; one.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;/!\&lt;/strong&gt; If you use GPT partitions, be aware that &lt;strong&gt;/dev/sdx1&lt;/strong&gt; is the BIOS partition, not your future /boot, start at &lt;strong&gt;/dev/sdx2&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;# for msdos partitions&lt;/span&gt;
+mdadm --create /dev/md0 --metadata&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;.90 --assume-clean --raid-devices&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt; --level&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt; /dev/sda1 /dev/sdb1 /dev/sdc1 /dev/sdd1
+mdadm --create /dev/md1 --assume-clean --raid-devices&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt; --level&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;6&lt;/span&gt; /dev/sda2 /dev/sdb2 /dev/sdc2 /dev/sdd2
+
+&lt;span class="c1"&gt;# for gpt partitions&lt;/span&gt;
+mdadm --create /dev/md0 --metadata&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;.90 --assume-clean --raid-devices&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt; --level&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt; /dev/sda2 /dev/sdb2 /dev/sdc2 /dev/sdd2
+mdadm --create /dev/md1 --assume-clean --raid-devices&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt; --level&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;6&lt;/span&gt; /dev/sda3 /dev/sdb3 /dev/sdc3 /dev/sdd3
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Let's format the RAID volumes&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;mkfs.ext4 /dev/md0
+mkfs.ext4 /dev/md1
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Let's start the debootstrap session. I use a basic /etc/apt/sources.list using this &lt;a href="http://repogen.simplylinux.ch/"&gt;convenient sources.list generator&lt;/a&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;mkdir /mnt/root
+mount /dev/md1 /mnt/root
+apt-get update&lt;span class="p"&gt;;&lt;/span&gt; apt-get install -y debootstrap
+debootstrap trusty /mnt/root
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /dev /mnt/root/dev
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /proc /mnt/root/proc
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /sys /mnt/root/sys
+
+&lt;span class="c1"&gt;# basic fstab&lt;/span&gt;
+&lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;proc            /proc   proc    defaults                0       0&lt;/span&gt;
+&lt;span class="s2"&gt;/dev/md1 /       ext4    errors=remount-ro       0       1&lt;/span&gt;
+&lt;span class="s2"&gt;/dev/md0        /boot   ext4    defaults                0       2&lt;/span&gt;
+&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&lt;/span&gt; /mnt/root/etc/fstab
+
+&lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;#############################################################&lt;/span&gt;
+&lt;span class="s2"&gt;################### OFFICIAL UBUNTU REPOS ###################&lt;/span&gt;
+&lt;span class="s2"&gt;#############################################################&lt;/span&gt;
+
+&lt;span class="s2"&gt;###### Ubuntu Main Repos&lt;/span&gt;
+&lt;span class="s2"&gt;deb http://fr.archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse&lt;/span&gt;
+&lt;span class="s2"&gt;deb-src http://fr.archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse&lt;/span&gt;
+
+&lt;span class="s2"&gt;###### Ubuntu Update Repos&lt;/span&gt;
+&lt;span class="s2"&gt;deb http://fr.archive.ubuntu.com/ubuntu/ trusty-security main restricted universe multiverse&lt;/span&gt;
+&lt;span class="s2"&gt;deb http://fr.archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse&lt;/span&gt;
+&lt;span class="s2"&gt;deb-src http://fr.archive.ubuntu.com/ubuntu/ trusty-security main restricted universe multiverse&lt;/span&gt;
+&lt;span class="s2"&gt;deb-src http://fr.archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse&lt;/span&gt;
+&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&lt;/span&gt; /mnt/root/etc/apt/sources.list
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Now we can go the installed volume and prepare the OS&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="nb"&gt;cd&lt;/span&gt; /mnt/root
+chroot .
+&lt;span class="c1"&gt;# mount /boot for the future kernel installation&lt;/span&gt;
+mount /boot
+&lt;span class="c1"&gt;# generate a few locales&lt;/span&gt;
+locale-gen fr_FR.UTF-8
+locale-gen fr_FR
+locale-gen en_US.UTF-8
+locale-gen en_US
+update-locale
+
+apt-get update
+&lt;span class="c1"&gt;# don&amp;#39;t forget to install mdadm on the system so it can boots correctly&lt;/span&gt;
+apt-get install -y mdadm lvm2
+&lt;span class="c1"&gt;# install the required kernel&lt;/span&gt;
+apt-get install -y linux-image-generic
+&lt;span class="c1"&gt;# install an openssh-server so you can remotely have access to the system&lt;/span&gt;
+apt-get install -y openssh-server
+&lt;span class="c1"&gt;# change your root password!!&lt;/span&gt;
+&lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;root:changeme&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;|&lt;/span&gt;chpasswd
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Stop the few services&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;/etc/init.d/ssh stop
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Umount everything, sync for the last i/o and reboot&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;umount /boot
+&lt;span class="nb"&gt;exit&lt;/span&gt;
+umount /mnt/root/dev
+umount /mnt/root/proc
+umount /mnt/root/sys
+sync
+reboot
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;LVM&lt;/h2&gt;
+&lt;p&gt;Work in progress&lt;/p&gt;
+&lt;h2&gt;Rescue&lt;/h2&gt;
+&lt;p&gt;Without LVM&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;p&gt;If you happen to boot on a rescue live-cd on one of this configuration, it will detect a RAID system but without the correct device names&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;mdadm -S /dev/md126
+mdadm -S /dev/md127
+mdadm --examine --scan /dev/sda&lt;span class="o"&gt;{&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;..4&lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&lt;/span&gt; /etc/mdadm/mdadm.conf
+mdadm --assemble --scan
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Your &lt;strong&gt;/dev/md0&lt;/strong&gt; and &lt;strong&gt;/dev/md1&lt;/strong&gt; should come online&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;mkdir -p /mnt/root
+mount /dev/md1 /mnt/root
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /dev /mnt/root/dev
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /proc /mnt/root/proc
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /sys /mnt/root/sys
+chroot /mnt/root
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Here you go!&lt;/p&gt;
+&lt;h2&gt;Credits&lt;/h2&gt;
+&lt;p&gt;Thanks to my friends &lt;a href="http://www.si7v.fr"&gt;Pierre Tourbeaux&lt;/a&gt; and &lt;a href="http://www.ipsolution.fr"&gt;Michael Kozma&lt;/a&gt; for all the advices and debugging over the year :)&lt;/p&gt;</summary><content type="html">&lt;p&gt;For my infrastructure purposes I often need to install as fast as possible.
+Most of my servers comes with 4 disks and one or more RAID card.&lt;/p&gt;
+&lt;p&gt;I usually don't trust the RAID cards, so I always create a raid0 / disk in order to use every logical volume like it was a real disk.&lt;/p&gt;
+&lt;p&gt;And I always use the above partition schema&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;mount&lt;/th&gt;
+&lt;th&gt;size&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;/boot&lt;/td&gt;
+&lt;td&gt;200M&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/&lt;/td&gt;
+&lt;td&gt;*&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2&gt;hpacucli&lt;/h2&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;# find your slot&lt;/span&gt;
+&lt;span class="nv"&gt;slot&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="sb"&gt;`&lt;/span&gt;hpacucli ctrl all show &lt;span class="p"&gt;|&lt;/span&gt; grep -i slot &lt;span class="p"&gt;|&lt;/span&gt; awk &lt;span class="s1"&gt;&amp;#39;{print $6}&amp;#39;&lt;/span&gt;
+hpacucli ctrl &lt;span class="nv"&gt;slot&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nv"&gt;$slot&lt;/span&gt; ld &lt;span class="m"&gt;1&lt;/span&gt; delete
+&lt;span class="c1"&gt;# create one raid0 per physical disk&lt;/span&gt;
+&lt;span class="k"&gt;for&lt;/span&gt; phys in &lt;span class="sb"&gt;`&lt;/span&gt;hpacucli ctrl all show config &lt;span class="p"&gt;|&lt;/span&gt; grep physicaldrive &lt;span class="p"&gt;|&lt;/span&gt; awk &lt;span class="s1"&gt;&amp;#39;{print $2}&amp;#39;&lt;/span&gt;&lt;span class="sb"&gt;`&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;do&lt;/span&gt;
+  hpacucli controller &lt;span class="nv"&gt;slot&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nv"&gt;$slot&lt;/span&gt; create &lt;span class="nv"&gt;type&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;ld &lt;span class="nv"&gt;drives&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="nv"&gt;$phys&lt;/span&gt; &lt;span class="nv"&gt;raid&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;
+&lt;span class="k"&gt;done&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Cleaning&lt;/h2&gt;
+&lt;p&gt;If you use an old server, you must do some cleaning&lt;/p&gt;
+&lt;p&gt;Let's start by zeroing the first 100MB of the partition in order to be sure to erase the partition table, the MBR&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt; i in &lt;span class="o"&gt;{&lt;/span&gt;a..d&lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;do&lt;/span&gt;
+  dd &lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/dev/sda &lt;span class="nv"&gt;of&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;/dev/zero &lt;span class="nv"&gt;count&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;100&lt;/span&gt; &lt;span class="nv"&gt;bs&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;1M
+&lt;span class="k"&gt;done&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Afterwars, let's notify the kernel about devices changes&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;partprobe
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;MSDOS partitions&lt;/h2&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt; i in &lt;span class="o"&gt;{&lt;/span&gt;a..d&lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;do&lt;/span&gt;
+  parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; --script -- mklabel msdos
+  parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB mkpart primary &lt;span class="m"&gt;1&lt;/span&gt; &lt;span class="m"&gt;200&lt;/span&gt;
+  parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB mkpart primary &lt;span class="m"&gt;200&lt;/span&gt; -1
+&lt;span class="k"&gt;done&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;GPT partitions&lt;/h2&gt;
+&lt;p&gt;For GPT partitions you need to create &lt;a href="http://en.wikipedia.org/wiki/BIOS_Boot_partition"&gt;BIOS Boot partition&lt;/a&gt; a small partition, at least 1mb.&lt;/p&gt;
+&lt;p&gt;&amp;nbsp;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt; i in &lt;span class="o"&gt;{&lt;/span&gt;a..d&lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;do&lt;/span&gt;
+    parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; --script -- mklabel gpt
+    parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB mkpart grub fat32 1mb 2mb
+    parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB &lt;span class="nb"&gt;set&lt;/span&gt; &lt;span class="m"&gt;1&lt;/span&gt; bios_grub on
+    parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB mkpart primary 2mb &lt;span class="m"&gt;200&lt;/span&gt;
+    parted /dev/sd&lt;span class="nv"&gt;$i&lt;/span&gt; -a optimal --script -- unit MB mkpart primary &lt;span class="m"&gt;200&lt;/span&gt; -1
+&lt;span class="k"&gt;done&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Installation&lt;/h2&gt;
+&lt;p&gt;I prefer to use software raid with mdadm.
+If you want to boot on a mdadm's volume you need it to use the &lt;a href="https://raid.wiki.kernel.org/index.php/RAID_superblock_formats"&gt;0.90 metadatas&lt;/a&gt;
+For you &lt;strong&gt;/&lt;/strong&gt;, use the raid-level you want and don't give any metadata paramaters so it can takes the &lt;strong&gt;1.2&lt;/strong&gt; one.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;/!\&lt;/strong&gt; If you use GPT partitions, be aware that &lt;strong&gt;/dev/sdx1&lt;/strong&gt; is the BIOS partition, not your future /boot, start at &lt;strong&gt;/dev/sdx2&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;# for msdos partitions&lt;/span&gt;
+mdadm --create /dev/md0 --metadata&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;.90 --assume-clean --raid-devices&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt; --level&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt; /dev/sda1 /dev/sdb1 /dev/sdc1 /dev/sdd1
+mdadm --create /dev/md1 --assume-clean --raid-devices&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt; --level&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;6&lt;/span&gt; /dev/sda2 /dev/sdb2 /dev/sdc2 /dev/sdd2
+
+&lt;span class="c1"&gt;# for gpt partitions&lt;/span&gt;
+mdadm --create /dev/md0 --metadata&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;0&lt;/span&gt;.90 --assume-clean --raid-devices&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt; --level&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt; /dev/sda2 /dev/sdb2 /dev/sdc2 /dev/sdd2
+mdadm --create /dev/md1 --assume-clean --raid-devices&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;4&lt;/span&gt; --level&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="m"&gt;6&lt;/span&gt; /dev/sda3 /dev/sdb3 /dev/sdc3 /dev/sdd3
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Let's format the RAID volumes&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;mkfs.ext4 /dev/md0
+mkfs.ext4 /dev/md1
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Let's start the debootstrap session. I use a basic /etc/apt/sources.list using this &lt;a href="http://repogen.simplylinux.ch/"&gt;convenient sources.list generator&lt;/a&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;mkdir /mnt/root
+mount /dev/md1 /mnt/root
+apt-get update&lt;span class="p"&gt;;&lt;/span&gt; apt-get install -y debootstrap
+debootstrap trusty /mnt/root
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /dev /mnt/root/dev
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /proc /mnt/root/proc
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /sys /mnt/root/sys
+
+&lt;span class="c1"&gt;# basic fstab&lt;/span&gt;
+&lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;proc            /proc   proc    defaults                0       0&lt;/span&gt;
+&lt;span class="s2"&gt;/dev/md1 /       ext4    errors=remount-ro       0       1&lt;/span&gt;
+&lt;span class="s2"&gt;/dev/md0        /boot   ext4    defaults                0       2&lt;/span&gt;
+&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&lt;/span&gt; /mnt/root/etc/fstab
+
+&lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;#############################################################&lt;/span&gt;
+&lt;span class="s2"&gt;################### OFFICIAL UBUNTU REPOS ###################&lt;/span&gt;
+&lt;span class="s2"&gt;#############################################################&lt;/span&gt;
+
+&lt;span class="s2"&gt;###### Ubuntu Main Repos&lt;/span&gt;
+&lt;span class="s2"&gt;deb http://fr.archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse&lt;/span&gt;
+&lt;span class="s2"&gt;deb-src http://fr.archive.ubuntu.com/ubuntu/ trusty main restricted universe multiverse&lt;/span&gt;
+
+&lt;span class="s2"&gt;###### Ubuntu Update Repos&lt;/span&gt;
+&lt;span class="s2"&gt;deb http://fr.archive.ubuntu.com/ubuntu/ trusty-security main restricted universe multiverse&lt;/span&gt;
+&lt;span class="s2"&gt;deb http://fr.archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse&lt;/span&gt;
+&lt;span class="s2"&gt;deb-src http://fr.archive.ubuntu.com/ubuntu/ trusty-security main restricted universe multiverse&lt;/span&gt;
+&lt;span class="s2"&gt;deb-src http://fr.archive.ubuntu.com/ubuntu/ trusty-updates main restricted universe multiverse&lt;/span&gt;
+&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&lt;/span&gt; /mnt/root/etc/apt/sources.list
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Now we can go the installed volume and prepare the OS&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="nb"&gt;cd&lt;/span&gt; /mnt/root
+chroot .
+&lt;span class="c1"&gt;# mount /boot for the future kernel installation&lt;/span&gt;
+mount /boot
+&lt;span class="c1"&gt;# generate a few locales&lt;/span&gt;
+locale-gen fr_FR.UTF-8
+locale-gen fr_FR
+locale-gen en_US.UTF-8
+locale-gen en_US
+update-locale
+
+apt-get update
+&lt;span class="c1"&gt;# don&amp;#39;t forget to install mdadm on the system so it can boots correctly&lt;/span&gt;
+apt-get install -y mdadm lvm2
+&lt;span class="c1"&gt;# install the required kernel&lt;/span&gt;
+apt-get install -y linux-image-generic
+&lt;span class="c1"&gt;# install an openssh-server so you can remotely have access to the system&lt;/span&gt;
+apt-get install -y openssh-server
+&lt;span class="c1"&gt;# change your root password!!&lt;/span&gt;
+&lt;span class="nb"&gt;echo&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;root:changeme&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;|&lt;/span&gt;chpasswd
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Stop the few services&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;/etc/init.d/ssh stop
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Umount everything, sync for the last i/o and reboot&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;umount /boot
+&lt;span class="nb"&gt;exit&lt;/span&gt;
+umount /mnt/root/dev
+umount /mnt/root/proc
+umount /mnt/root/sys
+sync
+reboot
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;LVM&lt;/h2&gt;
+&lt;p&gt;Work in progress&lt;/p&gt;
+&lt;h2&gt;Rescue&lt;/h2&gt;
+&lt;p&gt;Without LVM&lt;/p&gt;
+&lt;h4&gt;&lt;/h4&gt;
+&lt;p&gt;If you happen to boot on a rescue live-cd on one of this configuration, it will detect a RAID system but without the correct device names&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;mdadm -S /dev/md126
+mdadm -S /dev/md127
+mdadm --examine --scan /dev/sda&lt;span class="o"&gt;{&lt;/span&gt;&lt;span class="m"&gt;1&lt;/span&gt;..4&lt;span class="o"&gt;}&lt;/span&gt; &lt;span class="p"&gt;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&amp;amp;&lt;/span&gt;gt&lt;span class="p"&gt;;&lt;/span&gt; /etc/mdadm/mdadm.conf
+mdadm --assemble --scan
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Your &lt;strong&gt;/dev/md0&lt;/strong&gt; and &lt;strong&gt;/dev/md1&lt;/strong&gt; should come online&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;mkdir -p /mnt/root
+mount /dev/md1 /mnt/root
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /dev /mnt/root/dev
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /proc /mnt/root/proc
+mount -o &lt;span class="nb"&gt;bind&lt;/span&gt; /sys /mnt/root/sys
+chroot /mnt/root
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Here you go!&lt;/p&gt;
+&lt;h2&gt;Credits&lt;/h2&gt;
+&lt;p&gt;Thanks to my friends &lt;a href="http://www.si7v.fr"&gt;Pierre Tourbeaux&lt;/a&gt; and &lt;a href="http://www.ipsolution.fr"&gt;Michael Kozma&lt;/a&gt; for all the advices and debugging over the year :)&lt;/p&gt;</content><category term="linux"></category><category term="debootstrap"></category><category term="ubuntu"></category><category term="gpt"></category></entry><entry><title>ZFSonLinux</title><link href="http://127.0.0.1:8000/zfs-on-linux.html" rel="alternate"></link><published>2014-04-18T17:20:00+02:00</published><updated>2014-04-18T17:20:00+02:00</updated><author><name>Solvik</name></author><id>tag:127.0.0.1,2014-04-18:/zfs-on-linux.html</id><summary type="html">&lt;p&gt;At Online, we've been trying &lt;a href="http://zfsonlinux.org/"&gt;ZFS On Linux&lt;/a&gt; on a few services.&lt;/p&gt;
+&lt;p&gt;Here's a small how-to (and also a reminder) on how to install it and manage it:&lt;/p&gt;
+&lt;h2&gt;Install&lt;/h2&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    $ apt-add-repository --yes ppa:zfs-native/stable
+    $ apt-get update &amp;amp;amp;&amp;amp;amp; apt-get install ubuntu-zfs
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;ZFS comes with a RAID soft like system&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;RAID type&lt;/th&gt;
+&lt;th&gt;RAID-z type&lt;/th&gt;
+&lt;th align="center"&gt;Loosable disks&lt;/th&gt;
+&lt;th&gt;Min disks&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;RAID5&lt;/td&gt;
+&lt;td&gt;raidz&lt;/td&gt;
+&lt;td align="center"&gt;1 disks&lt;/td&gt;
+&lt;td&gt;3 disks&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;RAID6&lt;/td&gt;
+&lt;td&gt;raidz-2&lt;/td&gt;
+&lt;td align="center"&gt;2 disks&lt;/td&gt;
+&lt;td&gt;4 disks&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;RAID7&lt;/td&gt;
+&lt;td&gt;raidz-3&lt;/td&gt;
+&lt;td align="center"&gt;3 disks&lt;/td&gt;
+&lt;td&gt;5 disks&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Now we're going to create a zpool called &lt;strong&gt;storage&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    $ zpool create -f storage raidz2 c2d{1..5}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;If we wan't to add MOAR disks&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    $ zpool add -f storage raidz2 c2d{6..10}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Here are a few problems I've experienced:&lt;/p&gt;
+&lt;h2&gt;ZFS Resilvering (replace a drive)&lt;/h2&gt;
+&lt;p&gt;If you've got some spare disks, you should add them your spare pool&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    $ zpool add storage spare c2d11 c2d12
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;By doing so, if a disk fails, ZFS will replace it automatically with the failed one.
+Personnaly, I prefer to do it manualy.
+Assuming c2d4 failed, to replace it by c2d11, let's do this:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    $ zpool replace c2d4 c2d11
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;You will now have c2d11 resilvering your entire zpool. Once the resilver ends, the failed disk is ejected from the zpool.&lt;/p&gt;
+&lt;h2&gt;ZFS Scrubbing&lt;/h2&gt;
+&lt;p&gt;ZFS has a scrub feature to detect and correct silently errors. You could assimilate this to ECC RAM (RAM with error recovery).
+ZFS scrub feature check every block of your pool against a SHA-256 checksum.&lt;/p&gt;
+&lt;p&gt;You can invoke a scrub or be forced to live the scrub when a disk fails and you have to replace it.&lt;/p&gt;
+&lt;p&gt;Recently, on a 200T system, I replaced a failed disk by a spare one. It scrubbed the 200T.
+The &lt;strong&gt;zpool status&lt;/strong&gt; was mentionning a duration of about 500 hours of scrubbing. Time to hang yourself.&lt;/p&gt;
+&lt;p&gt;Fortunately, there is some tunnable settings in &lt;strong&gt;/sys/module/zfs/parameters&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    # Prioritize resilvering by setting the delay to zero
+    $ echo 0 &amp;amp;gt; zfs_resilver_delay
+
+    # Prioritize scrubs by setting the delay to zero
+    $ echo 0 &amp;amp;gt; zfs_scrub_delay
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;These changes takes effect immediatly and I haven't experienced any problems afterwards. Everything synced in 60 hours.&lt;/p&gt;
+&lt;p&gt;Attached a few other features to tune your scrub:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;feature&lt;/th&gt;
+&lt;th&gt;default value&lt;/th&gt;
+&lt;th&gt;description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_top_maxinflight&lt;/td&gt;
+&lt;td&gt;32&lt;/td&gt;
+&lt;td&gt;maximum I/Os per top-level&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_resilver_delay&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;number of ticks to delay resilver&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_scrub_delay&lt;/td&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;number of ticks to delay scrub&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_scan_idle&lt;/td&gt;
+&lt;td&gt;50&lt;/td&gt;
+&lt;td&gt;idle window in clock ticks&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_scan_min_time_ms&lt;/td&gt;
+&lt;td&gt;1000&lt;/td&gt;
+&lt;td&gt;min millisecs to scrub per txg&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_free_min_time_ms&lt;/td&gt;
+&lt;td&gt;1000&lt;/td&gt;
+&lt;td&gt;min millisecs to free per txg&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_resilver_min_time_ms&lt;/td&gt;
+&lt;td&gt;3000&lt;/td&gt;
+&lt;td&gt;min millisecs to resilver per txg&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_no_scrub_io&lt;/td&gt;
+&lt;td&gt;0 (bool)&lt;/td&gt;
+&lt;td&gt;set to disable scrub i/o&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_no_scrub_prefetch&lt;/td&gt;
+&lt;td&gt;0 (bool)&lt;/td&gt;
+&lt;td&gt;set to disable srub prefetching&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2&gt;Links&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/"&gt;https://pthree.org/2012/12/11/zfs-administration-part-vi-scrub-and-resilver/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/"&gt;http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</summary><content type="html">&lt;p&gt;At Online, we've been trying &lt;a href="http://zfsonlinux.org/"&gt;ZFS On Linux&lt;/a&gt; on a few services.&lt;/p&gt;
+&lt;p&gt;Here's a small how-to (and also a reminder) on how to install it and manage it:&lt;/p&gt;
+&lt;h2&gt;Install&lt;/h2&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    $ apt-add-repository --yes ppa:zfs-native/stable
+    $ apt-get update &amp;amp;amp;&amp;amp;amp; apt-get install ubuntu-zfs
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;ZFS comes with a RAID soft like system&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;RAID type&lt;/th&gt;
+&lt;th&gt;RAID-z type&lt;/th&gt;
+&lt;th align="center"&gt;Loosable disks&lt;/th&gt;
+&lt;th&gt;Min disks&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;RAID5&lt;/td&gt;
+&lt;td&gt;raidz&lt;/td&gt;
+&lt;td align="center"&gt;1 disks&lt;/td&gt;
+&lt;td&gt;3 disks&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;RAID6&lt;/td&gt;
+&lt;td&gt;raidz-2&lt;/td&gt;
+&lt;td align="center"&gt;2 disks&lt;/td&gt;
+&lt;td&gt;4 disks&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;RAID7&lt;/td&gt;
+&lt;td&gt;raidz-3&lt;/td&gt;
+&lt;td align="center"&gt;3 disks&lt;/td&gt;
+&lt;td&gt;5 disks&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Now we're going to create a zpool called &lt;strong&gt;storage&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    $ zpool create -f storage raidz2 c2d{1..5}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;If we wan't to add MOAR disks&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    $ zpool add -f storage raidz2 c2d{6..10}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Here are a few problems I've experienced:&lt;/p&gt;
+&lt;h2&gt;ZFS Resilvering (replace a drive)&lt;/h2&gt;
+&lt;p&gt;If you've got some spare disks, you should add them your spare pool&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    $ zpool add storage spare c2d11 c2d12
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;By doing so, if a disk fails, ZFS will replace it automatically with the failed one.
+Personnaly, I prefer to do it manualy.
+Assuming c2d4 failed, to replace it by c2d11, let's do this:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    $ zpool replace c2d4 c2d11
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;You will now have c2d11 resilvering your entire zpool. Once the resilver ends, the failed disk is ejected from the zpool.&lt;/p&gt;
+&lt;h2&gt;ZFS Scrubbing&lt;/h2&gt;
+&lt;p&gt;ZFS has a scrub feature to detect and correct silently errors. You could assimilate this to ECC RAM (RAM with error recovery).
+ZFS scrub feature check every block of your pool against a SHA-256 checksum.&lt;/p&gt;
+&lt;p&gt;You can invoke a scrub or be forced to live the scrub when a disk fails and you have to replace it.&lt;/p&gt;
+&lt;p&gt;Recently, on a 200T system, I replaced a failed disk by a spare one. It scrubbed the 200T.
+The &lt;strong&gt;zpool status&lt;/strong&gt; was mentionning a duration of about 500 hours of scrubbing. Time to hang yourself.&lt;/p&gt;
+&lt;p&gt;Fortunately, there is some tunnable settings in &lt;strong&gt;/sys/module/zfs/parameters&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;    # Prioritize resilvering by setting the delay to zero
+    $ echo 0 &amp;amp;gt; zfs_resilver_delay
+
+    # Prioritize scrubs by setting the delay to zero
+    $ echo 0 &amp;amp;gt; zfs_scrub_delay
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;These changes takes effect immediatly and I haven't experienced any problems afterwards. Everything synced in 60 hours.&lt;/p&gt;
+&lt;p&gt;Attached a few other features to tune your scrub:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;feature&lt;/th&gt;
+&lt;th&gt;default value&lt;/th&gt;
+&lt;th&gt;description&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_top_maxinflight&lt;/td&gt;
+&lt;td&gt;32&lt;/td&gt;
+&lt;td&gt;maximum I/Os per top-level&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_resilver_delay&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;number of ticks to delay resilver&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_scrub_delay&lt;/td&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;number of ticks to delay scrub&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_scan_idle&lt;/td&gt;
+&lt;td&gt;50&lt;/td&gt;
+&lt;td&gt;idle window in clock ticks&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_scan_min_time_ms&lt;/td&gt;
+&lt;td&gt;1000&lt;/td&gt;
+&lt;td&gt;min millisecs to scrub per txg&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_free_min_time_ms&lt;/td&gt;
+&lt;td&gt;1000&lt;/td&gt;
+&lt;td&gt;min millisecs to free per txg&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_resilver_min_time_ms&lt;/td&gt;
+&lt;td&gt;3000&lt;/td&gt;
+&lt;td&gt;min millisecs to resilver per txg&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_no_scrub_io&lt;/td&gt;
+&lt;td&gt;0 (bool)&lt;/td&gt;
+&lt;td&gt;set to disable scrub i/o&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;zfs_no_scrub_prefetch&lt;/td&gt;
+&lt;td&gt;0 (bool)&lt;/td&gt;
+&lt;td&gt;set to disable srub prefetching&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2&gt;Links&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/"&gt;https://pthree.org/2012/12/11/zfs-administration-part-vi-scrub-and-resilver/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/"&gt;http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content><category term="zfs"></category><category term="linux"></category><category term="zfsonlinux"></category></entry><entry><title>Symfony performances</title><link href="http://127.0.0.1:8000/symfony2-performances.html" rel="alternate"></link><published>2014-04-18T15:34:00+02:00</published><updated>2014-04-18T15:34:00+02:00</updated><author><name>Solvik</name></author><id>tag:127.0.0.1,2014-04-18:/symfony2-performances.html</id><summary type="html">&lt;p&gt;Since a few weeks, we've stumble upon a few performances problem on our Symfony2 backend.
+For the record, it's a 50k line codes, lots of feature and custom bundles.&lt;/p&gt;
+&lt;h2&gt;autoloader&lt;/h2&gt;
+&lt;p&gt;On the first request, Symfony PHP's code must discover all the classes of your code.
+It does a lot of stat/open/read/close on each file of your project.
+We've observe a 100% CPU usage for a few seconds, the time required for the code to discover everything.&lt;/p&gt;
+&lt;p&gt;By default, this feature is called without the &lt;strong&gt;--optimize&lt;/strong&gt; flag.&lt;/p&gt;
+&lt;p&gt;So we had to custom our fabric script by adding&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;  $ php composer.phar dump-autoload --optimize
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;For example, our autoloader filer was created with &lt;strong&gt;300&lt;/strong&gt; lines before.
+After the &lt;strong&gt;--optimize&lt;/strong&gt; flag, it now has more than &lt;strong&gt;5 000&lt;/strong&gt; lines.&lt;/p&gt;
+&lt;p&gt;To be continued with APC support and OpCode Cache of PHP 5.5&lt;/p&gt;</summary><content type="html">&lt;p&gt;Since a few weeks, we've stumble upon a few performances problem on our Symfony2 backend.
+For the record, it's a 50k line codes, lots of feature and custom bundles.&lt;/p&gt;
+&lt;h2&gt;autoloader&lt;/h2&gt;
+&lt;p&gt;On the first request, Symfony PHP's code must discover all the classes of your code.
+It does a lot of stat/open/read/close on each file of your project.
+We've observe a 100% CPU usage for a few seconds, the time required for the code to discover everything.&lt;/p&gt;
+&lt;p&gt;By default, this feature is called without the &lt;strong&gt;--optimize&lt;/strong&gt; flag.&lt;/p&gt;
+&lt;p&gt;So we had to custom our fabric script by adding&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;  $ php composer.phar dump-autoload --optimize
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;For example, our autoloader filer was created with &lt;strong&gt;300&lt;/strong&gt; lines before.
+After the &lt;strong&gt;--optimize&lt;/strong&gt; flag, it now has more than &lt;strong&gt;5 000&lt;/strong&gt; lines.&lt;/p&gt;
+&lt;p&gt;To be continued with APC support and OpCode Cache of PHP 5.5&lt;/p&gt;</content><category term="symfony2"></category><category term="performances"></category><category term="fabric"></category></entry><entry><title>Welcome !</title><link href="http://127.0.0.1:8000/welcome.html" rel="alternate"></link><published>2014-04-10T00:17:00+02:00</published><updated>2014-04-10T00:17:00+02:00</updated><author><name>Solvik</name></author><id>tag:127.0.0.1,2014-04-10:/welcome.html</id><summary type="html">&lt;p&gt;Welcome on this brand new blog using Pelican, a realy nice static-blog framework&lt;/p&gt;</summary><content type="html">&lt;p&gt;Welcome on this brand new blog using Pelican, a realy nice static-blog framework&lt;/p&gt;</content><category term="pelican"></category><category term="publishing"></category></entry></feed>

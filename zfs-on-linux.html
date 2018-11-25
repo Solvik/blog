@@ -1,0 +1,301 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="index, follow" />
+
+  <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
+
+    <link rel="stylesheet/less" type="text/css" href="http://127.0.0.1:8000/theme/stylesheet/style.less">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/less.js/2.5.1/less.min.js" type="text/javascript"></script>
+
+  <link rel="stylesheet" type="text/css" href="http://127.0.0.1:8000/theme/pygments/monokai.min.css">
+  <link rel="stylesheet" type="text/css" href="http://127.0.0.1:8000/theme/font-awesome/css/font-awesome.min.css">
+
+
+    <link href="http://127.0.0.1:8000/feeds/all.atom.xml" type="application/atom+xml" rel="alternate" title="A Pelican Blog Atom">
+
+
+
+
+    <!-- Chrome, Firefox OS and Opera -->
+    <meta name="theme-color" content="#3338db">
+    <!-- Windows Phone -->
+    <meta name="msapplication-navbutton-color" content="#3338db">
+    <!-- iOS Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Microsoft EDGE -->
+    <meta name="msapplication-TileColor" content="#3338db">
+
+<meta name="author" content="Solvik" />
+<meta name="description" content="At Online, we&#39;ve been trying ZFS On Linux on a few services. Here&#39;s a small how-to (and also a reminder) on how to install it and manage it: Install $ apt-add-repository --yes ppa:zfs-native/stable $ apt-get update &amp;amp;&amp;amp; apt-get install ubuntu-zfs ZFS comes with a RAID soft like system RAID type RAID-z type Loosable disks Min disks RAID5 raidz 1 disks 3 disks RAID6 raidz-2 2 disks 4 disks RAID7 raidz-3 3 disks 5 disks Now we&#39;re going to create a zpool called storage $ zpool create -f storage raidz2 c2d{1..5} If we wan&#39;t to add MOAR disks $ zpool add -f storage raidz2 c2d{6..10} Here are a few problems I&#39;ve experienced: ZFS Resilvering (replace a drive) If you&#39;ve got some spare disks, you should add them your spare pool $ zpool add storage spare c2d11 c2d12 By doing so, if a disk fails, ZFS will replace it automatically with the failed one. Personnaly, I prefer to do it manualy. Assuming c2d4 failed, to replace it by c2d11, let&#39;s do this: $ zpool replace c2d4 c2d11 You will now have c2d11 resilvering your entire zpool. Once the resilver ends, the failed disk is ejected from the zpool. ZFS Scrubbing ZFS has a scrub feature to detect and correct silently errors. You could assimilate this to ECC RAM (RAM with error recovery). ZFS scrub feature check every block of your pool against a SHA-256 checksum. You can invoke a scrub or be forced to live the scrub when a disk fails and you have to replace it. Recently, on a 200T system, I replaced a failed disk by a spare one. It scrubbed the 200T. The zpool status was mentionning a duration of about 500 hours of scrubbing. Time to hang yourself. Fortunately, there is some tunnable settings in /sys/module/zfs/parameters # Prioritize resilvering by setting the delay to zero $ echo 0 &amp;gt; zfs_resilver_delay # Prioritize scrubs by setting the delay to zero $ echo 0 &amp;gt; zfs_scrub_delay These changes takes effect immediatly and I haven&#39;t experienced any problems afterwards. Everything synced in 60 hours. Attached a few other features to tune your scrub: feature default value description zfs_top_maxinflight 32 maximum I/Os per top-level zfs_resilver_delay 2 number of ticks to delay resilver zfs_scrub_delay 4 number of ticks to delay scrub zfs_scan_idle 50 idle window in clock ticks zfs_scan_min_time_ms 1000 min millisecs to scrub per txg zfs_free_min_time_ms 1000 min millisecs to free per txg zfs_resilver_min_time_ms 3000 min millisecs to resilver per txg zfs_no_scrub_io 0 (bool) set to disable scrub i/o zfs_no_scrub_prefetch 0 (bool) set to disable srub prefetching Links https://pthree.org/2012/12/11/zfs-administration-part-vi-scrub-and-resilver/ http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/" />
+<meta name="keywords" content="zfs, linux, zfsonlinux">
+
+<meta property="og:site_name" content="A Pelican Blog"/>
+<meta property="og:title" content="ZFSonLinux"/>
+<meta property="og:description" content="At Online, we&#39;ve been trying ZFS On Linux on a few services. Here&#39;s a small how-to (and also a reminder) on how to install it and manage it: Install $ apt-add-repository --yes ppa:zfs-native/stable $ apt-get update &amp;amp;&amp;amp; apt-get install ubuntu-zfs ZFS comes with a RAID soft like system RAID type RAID-z type Loosable disks Min disks RAID5 raidz 1 disks 3 disks RAID6 raidz-2 2 disks 4 disks RAID7 raidz-3 3 disks 5 disks Now we&#39;re going to create a zpool called storage $ zpool create -f storage raidz2 c2d{1..5} If we wan&#39;t to add MOAR disks $ zpool add -f storage raidz2 c2d{6..10} Here are a few problems I&#39;ve experienced: ZFS Resilvering (replace a drive) If you&#39;ve got some spare disks, you should add them your spare pool $ zpool add storage spare c2d11 c2d12 By doing so, if a disk fails, ZFS will replace it automatically with the failed one. Personnaly, I prefer to do it manualy. Assuming c2d4 failed, to replace it by c2d11, let&#39;s do this: $ zpool replace c2d4 c2d11 You will now have c2d11 resilvering your entire zpool. Once the resilver ends, the failed disk is ejected from the zpool. ZFS Scrubbing ZFS has a scrub feature to detect and correct silently errors. You could assimilate this to ECC RAM (RAM with error recovery). ZFS scrub feature check every block of your pool against a SHA-256 checksum. You can invoke a scrub or be forced to live the scrub when a disk fails and you have to replace it. Recently, on a 200T system, I replaced a failed disk by a spare one. It scrubbed the 200T. The zpool status was mentionning a duration of about 500 hours of scrubbing. Time to hang yourself. Fortunately, there is some tunnable settings in /sys/module/zfs/parameters # Prioritize resilvering by setting the delay to zero $ echo 0 &amp;gt; zfs_resilver_delay # Prioritize scrubs by setting the delay to zero $ echo 0 &amp;gt; zfs_scrub_delay These changes takes effect immediatly and I haven&#39;t experienced any problems afterwards. Everything synced in 60 hours. Attached a few other features to tune your scrub: feature default value description zfs_top_maxinflight 32 maximum I/Os per top-level zfs_resilver_delay 2 number of ticks to delay resilver zfs_scrub_delay 4 number of ticks to delay scrub zfs_scan_idle 50 idle window in clock ticks zfs_scan_min_time_ms 1000 min millisecs to scrub per txg zfs_free_min_time_ms 1000 min millisecs to free per txg zfs_resilver_min_time_ms 3000 min millisecs to resilver per txg zfs_no_scrub_io 0 (bool) set to disable scrub i/o zfs_no_scrub_prefetch 0 (bool) set to disable srub prefetching Links https://pthree.org/2012/12/11/zfs-administration-part-vi-scrub-and-resilver/ http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/"/>
+<meta property="og:locale" content="en_US"/>
+<meta property="og:url" content="http://127.0.0.1:8000/zfs-on-linux.html"/>
+<meta property="og:type" content="article"/>
+<meta property="article:published_time" content="2014-04-18 17:20:00+02:00"/>
+<meta property="article:modified_time" content=""/>
+<meta property="article:author" content="http://127.0.0.1:8000/author/solvik.html">
+<meta property="article:section" content="System"/>
+<meta property="article:tag" content="zfs"/>
+<meta property="article:tag" content="linux"/>
+<meta property="article:tag" content="zfsonlinux"/>
+<meta property="og:image" content="">
+
+  <title>A Pelican Blog &ndash; ZFSonLinux</title>
+
+</head>
+<body>
+  <aside>
+    <div>
+      <a href="http://127.0.0.1:8000">
+        <img src="http://127.0.0.1:8000/theme/img/profile.png" alt="/home/solvik" title="/home/solvik">
+      </a>
+      <h1><a href="http://127.0.0.1:8000">/home/solvik</a></h1>
+
+<p>my place of sharing</p>
+      <nav>
+        <ul class="list">
+          <li><a href="http://127.0.0.1:8000/pages/about.html#about">About</a></li>
+
+        </ul>
+      </nav>
+
+      <ul class="social">
+        <li><a class="sc-linkedin" href="https://www.linkedin.com/in/solvikblum" target="_blank"><i class="fa fa-linkedin"></i></a></li>
+        <li><a class="sc-twitter" href="https://twitter.com/solvik" target="_blank"><i class="fa fa-twitter"></i></a></li>
+        <li><a class="sc-github" href="https://github.com/Solvik" target="_blank"><i class="fa fa-github"></i></a></li>
+      </ul>
+    </div>
+
+
+  </aside>
+  <main>
+
+    <nav>
+      <a href="http://127.0.0.1:8000">    Home
+</a>
+
+      <a href="/archives.html">Archives</a>
+      <a href="/categories.html">Categories</a>
+      <a href="/tags.html">Tags</a>
+
+      <a href="http://127.0.0.1:8000/feeds/all.atom.xml">    Atom
+</a>
+
+    </nav>
+
+<article class="single">
+  <header>
+      
+    <h1 id="zfs-on-linux">ZFSonLinux</h1>
+    <p>
+          Posted on avril 18, 2014 in <a href="http://127.0.0.1:8000/category/system.html">System</a>
+
+
+    </p>
+  </header>
+
+
+  <div>
+    <p>At Online, we've been trying <a href="http://zfsonlinux.org/">ZFS On Linux</a> on a few services.</p>
+<p>Here's a small how-to (and also a reminder) on how to install it and manage it:</p>
+<h2>Install</h2>
+<div class="highlight"><pre><span></span>    $ apt-add-repository --yes ppa:zfs-native/stable
+    $ apt-get update &amp;amp;&amp;amp; apt-get install ubuntu-zfs
+</pre></div>
+
+
+<p>ZFS comes with a RAID soft like system</p>
+<table>
+<thead>
+<tr>
+<th>RAID type</th>
+<th>RAID-z type</th>
+<th align="center">Loosable disks</th>
+<th>Min disks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RAID5</td>
+<td>raidz</td>
+<td align="center">1 disks</td>
+<td>3 disks</td>
+</tr>
+<tr>
+<td>RAID6</td>
+<td>raidz-2</td>
+<td align="center">2 disks</td>
+<td>4 disks</td>
+</tr>
+<tr>
+<td>RAID7</td>
+<td>raidz-3</td>
+<td align="center">3 disks</td>
+<td>5 disks</td>
+</tr>
+</tbody>
+</table>
+<p>Now we're going to create a zpool called <strong>storage</strong></p>
+<div class="highlight"><pre><span></span>    $ zpool create -f storage raidz2 c2d{1..5}
+</pre></div>
+
+
+<p>If we wan't to add MOAR disks</p>
+<div class="highlight"><pre><span></span>    $ zpool add -f storage raidz2 c2d{6..10}
+</pre></div>
+
+
+<p>Here are a few problems I've experienced:</p>
+<h2>ZFS Resilvering (replace a drive)</h2>
+<p>If you've got some spare disks, you should add them your spare pool</p>
+<div class="highlight"><pre><span></span>    $ zpool add storage spare c2d11 c2d12
+</pre></div>
+
+
+<p>By doing so, if a disk fails, ZFS will replace it automatically with the failed one.
+Personnaly, I prefer to do it manualy.
+Assuming c2d4 failed, to replace it by c2d11, let's do this:</p>
+<div class="highlight"><pre><span></span>    $ zpool replace c2d4 c2d11
+</pre></div>
+
+
+<p>You will now have c2d11 resilvering your entire zpool. Once the resilver ends, the failed disk is ejected from the zpool.</p>
+<h2>ZFS Scrubbing</h2>
+<p>ZFS has a scrub feature to detect and correct silently errors. You could assimilate this to ECC RAM (RAM with error recovery).
+ZFS scrub feature check every block of your pool against a SHA-256 checksum.</p>
+<p>You can invoke a scrub or be forced to live the scrub when a disk fails and you have to replace it.</p>
+<p>Recently, on a 200T system, I replaced a failed disk by a spare one. It scrubbed the 200T.
+The <strong>zpool status</strong> was mentionning a duration of about 500 hours of scrubbing. Time to hang yourself.</p>
+<p>Fortunately, there is some tunnable settings in <strong>/sys/module/zfs/parameters</strong></p>
+<div class="highlight"><pre><span></span>    # Prioritize resilvering by setting the delay to zero
+    $ echo 0 &amp;gt; zfs_resilver_delay
+
+    # Prioritize scrubs by setting the delay to zero
+    $ echo 0 &amp;gt; zfs_scrub_delay
+</pre></div>
+
+
+<p>These changes takes effect immediatly and I haven't experienced any problems afterwards. Everything synced in 60 hours.</p>
+<p>Attached a few other features to tune your scrub:</p>
+<table>
+<thead>
+<tr>
+<th>feature</th>
+<th>default value</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>zfs_top_maxinflight</td>
+<td>32</td>
+<td>maximum I/Os per top-level</td>
+</tr>
+<tr>
+<td>zfs_resilver_delay</td>
+<td>2</td>
+<td>number of ticks to delay resilver</td>
+</tr>
+<tr>
+<td>zfs_scrub_delay</td>
+<td>4</td>
+<td>number of ticks to delay scrub</td>
+</tr>
+<tr>
+<td>zfs_scan_idle</td>
+<td>50</td>
+<td>idle window in clock ticks</td>
+</tr>
+<tr>
+<td>zfs_scan_min_time_ms</td>
+<td>1000</td>
+<td>min millisecs to scrub per txg</td>
+</tr>
+<tr>
+<td>zfs_free_min_time_ms</td>
+<td>1000</td>
+<td>min millisecs to free per txg</td>
+</tr>
+<tr>
+<td>zfs_resilver_min_time_ms</td>
+<td>3000</td>
+<td>min millisecs to resilver per txg</td>
+</tr>
+<tr>
+<td>zfs_no_scrub_io</td>
+<td>0 (bool)</td>
+<td>set to disable scrub i/o</td>
+</tr>
+<tr>
+<td>zfs_no_scrub_prefetch</td>
+<td>0 (bool)</td>
+<td>set to disable srub prefetching</td>
+</tr>
+</tbody>
+</table>
+<h2>Links</h2>
+<ul>
+<li><a href="http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/">https://pthree.org/2012/12/11/zfs-administration-part-vi-scrub-and-resilver/</a></li>
+<li><a href="http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/">http://broken.net/uncategorized/zfs-performance-tuning-for-scrubs-and-resilvers/</a></li>
+</ul>
+  </div>
+  <div class="tag-cloud">
+    <p>
+      <a href="http://127.0.0.1:8000/tag/zfs.html">zfs</a>
+      <a href="http://127.0.0.1:8000/tag/linux.html">linux</a>
+      <a href="http://127.0.0.1:8000/tag/zfsonlinux.html">zfsonlinux</a>
+    </p>
+  </div>
+
+
+
+
+
+</article>
+
+    <footer>
+<p>
+  &copy;  2018 - This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>
+</p>
+<p>    Powered by <a href="http://getpelican.com" target="_blank">Pelican</a> - <a href="https://github.com/alexandrevicenzi/flex" target="_blank">Flex</a> theme by <a href="http://alexandrevicenzi.com" target="_blank">Alexandre Vicenzi</a>
+</p><p>
+  <a rel="license"
+     href="http://creativecommons.org/licenses/by-sa/4.0/"
+     target="_blank">
+    <img alt="Creative Commons License"
+         title="Creative Commons License"
+         style="border-width:0"
+           src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png"
+         width="80"
+         height="15"/>
+  </a>
+</p>    </footer>
+  </main>
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context" : "http://schema.org",
+  "@type" : "Blog",
+  "name": " A Pelican Blog ",
+  "url" : "http://127.0.0.1:8000",
+  "image": "",
+  "description": ""
+}
+</script>
+
+</body>
+</html>
